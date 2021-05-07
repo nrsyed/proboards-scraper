@@ -1,3 +1,4 @@
+import queue
 import sys
 
 import bs4
@@ -11,12 +12,19 @@ def get_source(url):
     soup = bs4.BeautifulSoup(source, "html.parser")
     return soup
 
+def scrape_board(board: bs4.element.Tag):
+    subboards = board.find("div", class_="container boards")
+    if subboards:
+        breakpoint()
+
 def scrape_category(category: bs4.element.Tag):
     title_bar = category.find("div", class_="title_wrapper")
     title = title_bar.text
+    boards = category.find("tbody").findAll("tr")
 
-    x = category
-    breakpoint()
+    for board in boards:
+        #scrape_board(board)
+        breakpoint()
 
 def scrape_root(url: str):
     source = get_source(url)
