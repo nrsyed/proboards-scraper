@@ -15,14 +15,20 @@ class User(Base):
         username (str): Registration name.
         group (str): Group/rank.
         email (str):
+        age (int):
+        latest_status (str):
         birthdate (str):
+        gender (str):
+        website (str):
+        website_url (str):
         location (str):
-        date_registered (datetime.datetime):
-        avatar (str): Filename of avatar.
+        date_registered (datetime.datetime): Unix timestamp.
         signature (str):
-
+        instant_messengers (str): 
         num_posts (int): Number of posts.
-        last_online (datetime.datetime):
+        last_online (datetime.datetime): Unix timestamp.
+
+        avatar (bytes?): avatar as a bitmap?
 
         posts: relationship
     """
