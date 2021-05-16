@@ -314,3 +314,14 @@ def scrape_site(url: str, username: str, password: str):
 
     #for category in categories:
     #    scrape_category(category)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("url", type=str, help="Homepage URL")
+    parser.add_argument("username", type=str, help="Login username")
+    parser.add_argument("password", type=str, help="Login password")
+    args = parser.parse_args()
+
+    args.url = args.url.rstrip("/")
+    scrape_site(args.url, args.username, args.password)
