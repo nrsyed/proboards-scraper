@@ -19,16 +19,11 @@ def process_queues(
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
-    given database. This function first consumes all users to the database,
-    since users are referenced in all content. Subsequently, it adds all
-    content to the database.
-
-    Because content is heirarchical, each content type (board, thread, post)
-    need not be given its own queue, i.e., a board will be added to the
-    ``content_queue`` before any of its threads, and a thread will be added
-    to the queue before any of its posts; therefore, we don't have to worry
-    about a post being added before the thread it belongs to has been added,
-    for example.
+    given database. This function first adds all users to the database (since
+    users are referenced by all other content). Content is heirarchical (boards
+    are added to the queue before threads, threads before posts, etc.); thus,
+    each content piece's parent will have been added to the database earlier in
+    the queue.
     """
     pass
 
@@ -70,6 +65,7 @@ def get_login_cookies(
             elif input_name == "continue":
                 submit_input = input_
         except:
+            # TODO
             pass
 
     email_input.send_keys(username)
@@ -122,7 +118,8 @@ def get_source(url: str, cookies: dict = None) -> bs4.BeautifulSoup:
 def scrape_board(board: bs4.element.Tag):
     subboards = board.find("div", class_="container boards")
     if subboards:
-        breakpoint()
+        # TODO
+        pass
 
 
 def scrape_category(category: bs4.element.Tag):
@@ -131,8 +128,8 @@ def scrape_category(category: bs4.element.Tag):
     boards = category.find("tbody").findAll("tr")
 
     for board in boards:
+        # TODO
         #scrape_board(board)
-        breakpoint()
 
 
 def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
@@ -309,6 +306,7 @@ def scrape_site(url: str, username: str, password: str):
     cookies = get_login_cookies(url, username, password)
     scrape_users(url, cookies)
 
+    # TODO
     #source = get_source(url)
     #categories = source.findAll("div", class_="container boards")
 
