@@ -11,6 +11,7 @@ class User(Base):
     """
     Attributes:
         id (int):
+        user_number (int):
         name (str): Display name.
         username (str): Registration name.
         group (str): Group/rank.

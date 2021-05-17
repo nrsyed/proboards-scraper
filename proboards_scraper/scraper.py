@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import pathlib
 import requests
 import sys
@@ -24,6 +25,7 @@ async def add_user_to_database(db: MockDatabase, user: dict):
     await asyncio.sleep(0.2)
     return True
 
+
 async def process_queues(
     db_path: pathlib.Path, user_queue: asyncio.Queue, content_queue: asyncio.Queue
 ):
@@ -35,7 +37,7 @@ async def process_queues(
     each content piece's parent will have been added to the database earlier in
     the queue.
     """
-    x = MockDatabase()
+    db = MockDatabase()
 
     all_users_added = False
     while not all_users_added:
@@ -44,7 +46,7 @@ async def process_queues(
         if user is None:
             all_users_added = True
         else:
-            success = await add_user_to_database(x, user)
+            success = await add_user_to_database(db, user)
 
 
 def get_login_cookies(
@@ -176,7 +178,13 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
 
 
 async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
-    user = {}
+    """
+    TODO
+    """
+    # Get user number from URL, eg, "https://xyz.proboards.com/user/42" has
+    # user number 42. We can exploit os.path.split() to grab everything right
+    # of the last backslash "/".
+    user = {"user_number": int(os.path.split(url)[1])}
 
     source = await get_source(url, cookies=cookies)
     user_container = source.find("div", {"class": "show-user"})
