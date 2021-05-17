@@ -1,16 +1,28 @@
 import argparse
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import logging
 import pathlib
 import requests
 import sys
-import threading
 import time
 from typing import Tuple
 
 import bs4
 import selenium.webdriver
 
+
+class MockDatabase:
+    def __init__(self):
+        self.users = []
+
+
+async def add_user_to_database(db: MockDatabase, user: dict):
+    """
+    TODO
+    """
+    db.users.append(user)
+    await asyncio.sleep(0.2)
+    return True
 
 async def process_queues(
     db_path: pathlib.Path, user_queue: asyncio.Queue, content_queue: asyncio.Queue
@@ -23,7 +35,16 @@ async def process_queues(
     each content piece's parent will have been added to the database earlier in
     the queue.
     """
-    pass
+    x = MockDatabase()
+
+    all_users_added = False
+    while not all_users_added:
+        user = await user_queue.get()
+
+        if user is None:
+            all_users_added = True
+        else:
+            success = await add_user_to_database(x, user)
 
 
 def get_login_cookies(
@@ -320,9 +341,9 @@ def scrape_site(url: str, username: str, password: str):
 
     get_users_task = get_users(url, cookies, user_queue)
     #get_content_task = 
-    #database_task = 
+    database_task = process_queues(None, user_queue, content_queue)
 
-    task_group = asyncio.gather(get_users_task)
+    task_group = asyncio.gather(get_users_task, database_task)
     loop.run_until_complete(task_group)
 
     # TODO: move this to dedicated function
@@ -331,15 +352,3 @@ def scrape_site(url: str, username: str, password: str):
 
     #for category in categories:
     #    scrape_category(category)
-    breakpoint()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("url", type=str, help="Homepage URL")
-    parser.add_argument("username", type=str, help="Login username")
-    parser.add_argument("password", type=str, help="Login password")
-    args = parser.parse_args()
-
-    args.url = args.url.rstrip("/")
-    scrape_site(args.url, args.username, args.password)
