@@ -1,7 +1,7 @@
 import argparse
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import pathlib
-import queue
 import requests
 import sys
 import threading
@@ -12,10 +12,8 @@ import bs4
 import selenium.webdriver
 
 
-#https://stackoverflow.com/questions/51682341/how-to-send-cookies-with-urllib
-
-def process_queues(
-    db_path: pathlib.Path, user_queue: queue.Queue, content_queue: queue.Queue
+async def process_queues(
+    db_path: pathlib.Path, user_queue: asyncio.Queue, content_queue: asyncio.Queue
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
@@ -71,7 +69,7 @@ def get_login_cookies(
     email_input.send_keys(username)
     password_input.send_keys(password)
     submit_input.click()
-    time.sleep(1)
+    time.sleep(page_load_wait)
 
     # Get cookies from selenium driver and add to requests session.
     cookies = driver.get_cookies()
@@ -101,18 +99,21 @@ def get_login_session(cookies: dict) -> requests.sessions.Session:
     return sess
 
 
-def get_source(url: str, cookies: dict = None) -> bs4.BeautifulSoup:
+async def get_source(url: str, cookies: dict = None) -> bs4.BeautifulSoup:
+    loop = asyncio.get_running_loop()
+
     if cookies:
         # Create a login session with the provided authentication cookies
         # before getting the page at `url`.
         sess = get_login_session(cookies)
-        response = sess.get(url)
+        future = loop.run_in_executor(None, sess.get, url)
     else:
-        response = requests.get(url)
+        future = loop.run_in_executor(None, requests.get, url)
+
+    response = await future
 
     # TODO: check response HTTP status code
-    source = response.text
-    return bs4.BeautifulSoup(source, "html.parser")
+    return bs4.BeautifulSoup(response.text, "html.parser")
 
 
 def scrape_board(board: bs4.element.Tag):
@@ -130,6 +131,7 @@ def scrape_category(category: bs4.element.Tag):
     for board in boards:
         # TODO
         #scrape_board(board)
+        pass
 
 
 def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
@@ -152,10 +154,10 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-def _scrape_user(url: str, cookies: dict):
+async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     user = {}
 
-    source = get_source(url, cookies=cookies)
+    source = await get_source(url, cookies=cookies)
     user_container = source.find("div", {"class": "show-user"})
 
     # Get display name and group.
@@ -265,10 +267,11 @@ def _scrape_user(url: str, cookies: dict):
             messenger_str = ";".join(messenger_str_list)
             user["instant_messengers"] = messenger_str
 
+    await user_queue.put(user)
     return user
 
 
-def scrape_users(url: str, cookies: dict):
+async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
     """
     url: Site base URL.
     cookies: Cookies dict for login authentication.
@@ -276,42 +279,59 @@ def scrape_users(url: str, cookies: dict):
     members_page_url = f"{url}/members"
     member_hrefs = []
 
-    source = get_source(members_page_url, cookies=cookies)
+    source = await get_source(members_page_url, cookies=cookies)
     _member_hrefs, next_href = _get_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{url}{next_href}"
-        source = get_source(next_url, cookies=cookies)
+        source = await get_source(next_url, cookies=cookies)
         _member_hrefs, next_href = _get_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
 
-    #_scrape_user("https://mtforums84.proboards.com/user/26", cookies)
-    #_scrape_user(member_urls[0], cookies)
+    loop = asyncio.get_running_loop()
+    tasks = []
 
-    pool = ThreadPoolExecutor()
-    futures = []
     for member_url in member_urls:
-        futures.append(pool.submit(_scrape_user, member_url, cookies))
-    pool.shutdown()
+        task = loop.create_task(_get_user(member_url, cookies, user_queue))
+        tasks.append(task)
 
-    users = [future.result() for future in futures]
-
-    #TODO
+    await asyncio.wait(tasks)
+    await user_queue.put(None)
+    users = [task.result() for task in tasks]
+    return users
 
 
 def scrape_site(url: str, username: str, password: str):
-    cookies = get_login_cookies(url, username, password)
-    scrape_users(url, cookies)
+    """
+    TODO
+    """
+    loop = asyncio.get_event_loop()
 
-    # TODO
+    # Queues from which elements will be consumed to populate the database.
+    # Users will be added before other site content.
+    user_queue = asyncio.Queue()
+    content_queue = asyncio.Queue()
+
+    # Get cookies for parts of the site requiring login authentication.
+    cookies = get_login_cookies(url, username, password)
+
+    get_users_task = get_users(url, cookies, user_queue)
+    #get_content_task = 
+    #database_task = 
+
+    task_group = asyncio.gather(get_users_task)
+    loop.run_until_complete(task_group)
+
+    # TODO: move this to dedicated function
     #source = get_source(url)
     #categories = source.findAll("div", class_="container boards")
 
     #for category in categories:
     #    scrape_category(category)
+    breakpoint()
 
 
 if __name__ == "__main__":
