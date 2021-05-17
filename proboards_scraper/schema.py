@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, DateTime, ForeignKey, String, Text, UniqueConstraint
+    Column, Integer, ForeignKey, String, Text, UniqueConstraint
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -10,39 +10,76 @@ Base = declarative_base()
 class User(Base):
     """
     Attributes:
-        id (int):
-        user_number (int):
-        name (str): Display name.
-        username (str): Registration name.
-        group (str): Group/rank.
-        email (str):
-        age (int):
-        latest_status (str):
-        birthdate (str):
-        gender (str):
-        website (str):
-        website_url (str):
-        location (str):
-        date_registered (datetime.datetime): Unix timestamp.
-        signature (str):
-        instant_messengers (str): 
-        num_posts (int): Number of posts.
-        last_online (datetime.datetime): Unix timestamp.
+        id (int): Primary key.
+        user_number (int): User number obtained from the user's profile, eg,
+            ``https://yoursite.proboards.com/user/21`` refers to the user
+            with user number 23. This should be unique for each user.
 
-        avatar (bytes?): avatar as a bitmap?
+        age (int): Optional
+        birthdate (str): Optional
+        date_registered (str): Unix timestamp
+        email (str): User email.
+        instant_messengers (str): Optional; a string consisting of
+            semicolon-delimited "messenger_name:screen_name" pairs, eg,
+            "AIM:ssj_goku12;ICQ:12345;YIM:duffman20".
+        gender (str): Optional ("Male"/"Female"/"Other")
+        group (str): Group/rank (eg, "Regular Membership", "Global Moderator")
+        last_online (str): Unix timestamp
+        latest_status (str): Optional
+        location (str): Optional
+        name (str): Display name.
+        num_posts (int): Number of posts (scraped from the user's profile
+            page; to get the actual number of posts by the user in the
+            database, use the ``posts`` key.
+        signature (str): Optional
+        username (str): Registration name.
+        website (str): Optional
+        website_url (str): Optional
 
         posts: relationship
+        threads: relationship
+
+        TODO
+        avatar (bytes?): avatar as a bitmap?
     """
     __tablename__ = "user"
+
+    id = Column("id", Integer, primary_key=True)
+    user_number = Column("user_number", Integer, nullable=False, unique=True)
+
+    age = Column("age", Integer)
+    birthdate = Column("birthdate", String)
+    date_registered = Column("date_registered", String)
+    email = Column("email", String)
+    instant_messengers = Column("instant_messengers", String)
+    gender = Column("gender", String)
+    group = Column("group", String)
+    last_online = Column("last_online", String)
+    latest_status = Column("latest_status", String)
+    location = Column("location", String)
+    name = Column("name", String)
+    num_posts = Column("num_posts", Integer)
+    signature = Column("signature", String)
+    username = Column("username", String)
+    website = Column("website", String)
+    website_url = Column("website_url", String)
+
+    # One-to-many mapping of a user and all posts they've made or threads
+    # they've started.
+    posts = relationship("Post")
+    threads = relationship("Thread")
 
 
 class Board(Base):
     """
     Attributes:
-        id (int):
-        name (str):
-        parent_board (int):
-        url (str):
+        id (int): Primary key.
+        board_number (int): Board number obtained from the board URL, eg,
+            ``https://yoursite.proboards.com/board/42/general`` refers to the
+            "General" board having board number 42. This should be unique.
+        name (str): Board name (required).
+        parent_board (int): Parent board primary key (if a sub-board).
+        url (str): 
 
         sub_boards: relationship
     """
@@ -56,10 +93,13 @@ class Thread(Base):
         locked (bool):
         url (str):
 
-        board_id (int): Board (in ``board``) table where the thread was made.
-        started_by_user (int):
+        board_id (int): Board (in ``board`` table) where the thread was made.
+        user_id (int): User (in ``user`` table) who started the thread.
     """
     __tablename__ = "thread"
+
+    board_id = Column("board_id", ForeignKey("board.id"), nullable=False)
+    user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
 
 
 class Post(Base):
@@ -77,7 +117,10 @@ class Post(Base):
     """
     __tablename__ = "post"
 
-    # NOTE: use Text for message
+    # NOTE: use Text for message?
+
+    thread_id = Column("thread_id", ForeignKey("thread.id"), nullable=False)
+    user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
 
 
 class Poll(Base):
