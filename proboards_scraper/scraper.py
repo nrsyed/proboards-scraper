@@ -183,8 +183,11 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     """
     # Get user number from URL, eg, "https://xyz.proboards.com/user/42" has
     # user number 42. We can exploit os.path.split() to grab everything right
-    # of the last backslash "/".
-    user = {"user_number": int(os.path.split(url)[1])}
+    # of the last backslash.
+    user = {
+        "url": url,
+        "user_number": int(os.path.split(url)[1])
+    }
 
     source = await get_source(url, cookies=cookies)
     user_container = source.find("div", {"class": "show-user"})
@@ -248,8 +251,8 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
         elif heading == "Location":
             user["location"] = val.text
         elif heading == "Posts":
-            # Remove commas from post count (eg, "1500" vs "1,500").
-            user["num_posts"] = int(val.text.replace(",", ""))
+            # Remove commas from post count (eg, "1,500" to "1500").
+            user["post_count"] = int(val.text.replace(",", ""))
         elif heading == "Web Site":
             website_anchor = val.find("a")
             user["website_url"] = website_anchor.get("href")
