@@ -11,8 +11,8 @@ class User(Base):
     """
     Attributes:
         id (int): Primary key.
-        user_number (int): User number obtained from the user's profile, eg,
-            ``https://yoursite.proboards.com/user/21`` refers to the user
+        user_number (int): User number obtained from the user's profile URL,
+            eg, ``https://yoursite.proboards.com/user/21`` refers to the user
             with user number 23. This should be unique for each user.
 
         age (int): Optional
@@ -28,10 +28,11 @@ class User(Base):
         latest_status (str): Optional
         location (str): Optional
         name (str): Display name.
-        num_posts (int): Number of posts (scraped from the user's profile
-            page; to get the actual number of posts by the user in the
+        post_count (int): Number of posts (scraped from the user's profile
+            page); to get the actual number of posts by the user in the
             database, use the ``posts`` key.
         signature (str): Optional
+        url (str): Original user profile page URL.
         username (str): Registration name.
         website (str): Optional
         website_url (str): Optional
@@ -58,8 +59,9 @@ class User(Base):
     latest_status = Column("latest_status", String)
     location = Column("location", String)
     name = Column("name", String)
-    num_posts = Column("num_posts", Integer)
+    post_count = Column("post_count", Integer)
     signature = Column("signature", String)
+    url = Column("url", String)
     username = Column("username", String)
     website = Column("website", String)
     website_url = Column("website_url", String)
@@ -68,6 +70,17 @@ class User(Base):
     # they've started.
     posts = relationship("Post")
     threads = relationship("Thread")
+
+
+class Category(Base):
+    """
+    Attributes:
+        id (int): Primary key.
+        category_number (int): Category number obtained from the site's main
+            page source.
+        name (str): Category name.
+    """
+    __tablename__ = "category"
 
 
 class Board(Base):
@@ -85,6 +98,9 @@ class Board(Base):
     """
     __tablename__ = "board"
 
+    id = Column("id", Integer, primary_key=True)
+    board_number = Column("board_number", Integer, nullable=False, unique=True)
+
 
 class Thread(Base):
     """
@@ -97,6 +113,11 @@ class Thread(Base):
         user_id (int): User (in ``user`` table) who started the thread.
     """
     __tablename__ = "thread"
+
+    id = Column("id", Integer, primary_key=True)
+    thread_number = Column(
+        "thread_number", Integer, nullable=False, unique=True
+    )
 
     board_id = Column("board_id", ForeignKey("board.id"), nullable=False)
     user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
