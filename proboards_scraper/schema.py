@@ -11,10 +11,9 @@ class User(Base):
     """
     Attributes:
         id (int): Primary key.
-        user_number (int): User number obtained from the user's profile URL,
+        number (int): User number obtained from the user's profile URL,
             eg, ``https://yoursite.proboards.com/user/21`` refers to the user
             with user number 23. This should be unique for each user.
-
         age (int): Optional
         birthdate (str): Optional
         date_registered (str): Unix timestamp
@@ -46,7 +45,7 @@ class User(Base):
     __tablename__ = "user"
 
     id = Column("id", Integer, primary_key=True)
-    user_number = Column("user_number", Integer, nullable=False, unique=True)
+    number = Column("number", Integer, nullable=False, unique=True)
 
     age = Column("age", Integer)
     birthdate = Column("birthdate", String)
@@ -87,59 +86,84 @@ class Board(Base):
     """
     Attributes:
         id (int): Primary key.
-        board_number (int): Board number obtained from the board URL, eg,
+        name (str): Board name (required).
+        number (int): Board number obtained from the board URL, eg,
             ``https://yoursite.proboards.com/board/42/general`` refers to the
             "General" board having board number 42. This should be unique.
-        name (str): Board name (required).
-        parent_board (int): Parent board primary key (if a sub-board).
         url (str): 
 
-        sub_boards: relationship
+        category_id (int): Category to which this board belongs.
+        parent_id (int): Parent board primary key (if a sub-board).
+
+        sub_boards: This board's sub-boards.
+        threads: This board's threads.
     """
     __tablename__ = "board"
 
     id = Column("id", Integer, primary_key=True)
-    board_number = Column("board_number", Integer, nullable=False, unique=True)
+    name = Column("name", String, nullable=False)
+    number = Column("number", Integer, nullable=False, unique=True)
+    url = Column("url", String)
+
+    category_id = Column("category_id", ForeignKey("category.id"))
+    parent_id = Column("parent_id", ForeignKey("board.id"))
+
+    sub_boards = relationship("Board")
+    threads = relationship("Thread")
 
 
 class Thread(Base):
     """
     Attributes:
-        id (int):
+        id (int): Primary key.
         locked (bool):
-        url (str):
+        number: Thread number from thread URL.
+        title (str): Thread title.
+        url (str): Original URL.
 
         board_id (int): Board (in ``board`` table) where the thread was made.
         user_id (int): User (in ``user`` table) who started the thread.
+
+        posts: This thread's posts.
     """
     __tablename__ = "thread"
 
     id = Column("id", Integer, primary_key=True)
-    thread_number = Column(
-        "thread_number", Integer, nullable=False, unique=True
-    )
+    # TODO: default for locked, check bool type
+    locked = Column("locked", Boolean)
+    number = Column("number", Integer, nullable=False, unique=True)
+    title = Column("title", String)
+    url = Column("url", String)
 
     board_id = Column("board_id", ForeignKey("board.id"), nullable=False)
     user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
+
+    posts = relationship("Post")
 
 
 class Post(Base):
     """
     Attributes:
         id (int): Primary key.
-        datetime (datetime.datetime): Datetime at which post was made.
-        last_edited (datetime.datetime): Datetime at which post was edited.
-        message (str): Message text.
-        url (str):
+        date (str): When the post was made (Unix timestamp).
+        last_edited (str): When the post was last edited (Unix timestamp); if
+            never, this field should be null.
+        message (str): Post content/message.
+        url (str): Original post URL.
 
-        user_id (int): User (in ``user`` table) who made the post.
-        thread_id (int): Thread (in ``thread``) where the post was made.
         edit_user_id (int): User (in ``user`` table) who made the last edit.
+        thread_id (int): Thread (in ``thread``) where the post was made.
+        user_id (int): User (in ``user`` table) who made the post.
     """
     __tablename__ = "post"
 
-    # NOTE: use Text for message?
+    id = Column("id", Integer, primary_key=True)
+    date = Column("date", String)
+    last_edited = Column("date", String)
+    message = Column("message", String)
+    url = Column("url", String)
 
+    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
     thread_id = Column("thread_id", ForeignKey("thread.id"), nullable=False)
     user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
 
