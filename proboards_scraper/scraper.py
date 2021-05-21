@@ -15,6 +15,7 @@ import selenium.webdriver
 class MockDatabase:
     def __init__(self):
         self.users = []
+        self.categories = []
 
 
 async def add_user_to_database(db: MockDatabase, user: dict):
@@ -22,8 +23,20 @@ async def add_user_to_database(db: MockDatabase, user: dict):
     TODO
     """
     db.users.append(user)
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(0.1)
     return True
+
+
+async def add_category_to_database(db: MockDatabase, category: dict):
+    db.categories.append(category)
+    await asyncio.sleep(0.1)
+    return True
+
+
+async def add_to_database(db: MockDatabase, item: dict):
+    type_ = item["type"]
+    if type_ == "user":
+        db.users.append(
 
 
 async def process_queues(
@@ -185,6 +198,7 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     # user number 42. We can exploit os.path.split() to grab everything right
     # of the last backslash.
     user = {
+        "type": "user",
         "url": url,
         "user_number": int(os.path.split(url)[1])
     }
@@ -336,6 +350,18 @@ async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
     return users
 
 
+async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
+    """
+    Scrape all categories/boards from the main page.
+    """
+    source = get_source(url)
+    categories = source.findAll("div", class_="container boards")
+
+    for category in categories:
+        add
+        pass
+
+
 def scrape_site(url: str, username: str, password: str):
     """
     TODO
@@ -351,15 +377,9 @@ def scrape_site(url: str, username: str, password: str):
     cookies = get_login_cookies(url, username, password)
 
     get_users_task = get_users(url, cookies, user_queue)
-    #get_content_task = 
+    get_content_task = get_content(url, cookies, content_queue)
     database_task = process_queues(None, user_queue, content_queue)
 
     task_group = asyncio.gather(get_users_task, database_task)
     loop.run_until_complete(task_group)
 
-    # TODO: move this to dedicated function
-    #source = get_source(url)
-    #categories = source.findAll("div", class_="container boards")
-
-    #for category in categories:
-    #    scrape_category(category)
