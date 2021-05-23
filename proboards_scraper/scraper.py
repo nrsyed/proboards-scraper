@@ -10,6 +10,11 @@ from typing import Tuple
 
 import bs4
 import selenium.webdriver
+import sqlalchemy
+import sqlalchemy.orm
+
+#from .schema import Base, Board, Category, Poll, Post, Thread, User
+from .schema import Base, Board, Category, Post, Thread, User
 
 
 class MockDatabase:
@@ -18,25 +23,10 @@ class MockDatabase:
         self.categories = []
 
 
-async def add_user_to_database(db: MockDatabase, user: dict):
-    """
-    TODO
-    """
-    db.users.append(user)
-    await asyncio.sleep(0.1)
-    return True
-
-
-async def add_category_to_database(db: MockDatabase, category: dict):
-    db.categories.append(category)
-    await asyncio.sleep(0.1)
-    return True
-
-
-async def add_to_database(db: MockDatabase, item: dict):
+async def add_to_database(db: sqlalchemy.orm.session.Session, item: dict):
     type_ = item["type"]
     if type_ == "user":
-        db.users.append(
+        pass
 
 
 async def process_queues(
@@ -362,10 +352,16 @@ async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
         pass
 
 
-def scrape_site(url: str, username: str, password: str):
+def scrape_site(url: str, username: str, password: str, db_path: str):
     """
     TODO
     """
+    # Open database connection and initialize database.
+    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
+    Session = sqlalchemy.orm.sessionmaker(engine)
+    db = Session()
+    Base.metadata.create_all(engine)
+
     loop = asyncio.get_event_loop()
 
     # Queues from which elements will be consumed to populate the database.
@@ -376,9 +372,10 @@ def scrape_site(url: str, username: str, password: str):
     # Get cookies for parts of the site requiring login authentication.
     cookies = get_login_cookies(url, username, password)
 
+
     get_users_task = get_users(url, cookies, user_queue)
     get_content_task = get_content(url, cookies, content_queue)
-    database_task = process_queues(None, user_queue, content_queue)
+    database_task = process_queues(db, user_queue, content_queue)
 
     task_group = asyncio.gather(get_users_task, database_task)
     loop.run_until_complete(task_group)
