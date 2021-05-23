@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, ForeignKey, String, Text, UniqueConstraint
+    Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -75,11 +75,19 @@ class Category(Base):
     """
     Attributes:
         id (int): Primary key.
-        category_number (int): Category number obtained from the site's main
-            page source.
         name (str): Category name.
+        number (int): Category number obtained from the main page source.
+
+        boards: This category's boards (including sub-boards).
     """
     __tablename__ = "category"
+
+    id = Column("id", Integer, primary_key=True)
+    name = Column("name", String, nullable=False)
+    number = Column("number", Integer, nullable=False, unique=True)
+
+    boards = relationship("Board")
+
 
 
 class Board(Base):
@@ -159,7 +167,7 @@ class Post(Base):
 
     id = Column("id", Integer, primary_key=True)
     date = Column("date", String)
-    last_edited = Column("date", String)
+    last_edited = Column("last_edited", String)
     message = Column("message", String)
     url = Column("url", String)
 
@@ -168,9 +176,9 @@ class Post(Base):
     user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
 
 
-class Poll(Base):
-    """
-    Attributes:
-        id (int):
-    """
-    __tablename__ = "poll"
+#class Poll(Base):
+#    """
+#    Attributes:
+#        id (int):
+#    """
+#    __tablename__ = "poll"
