@@ -1,3 +1,5 @@
+# TODO: logging
+# TODO: use aiohttp instead of requests?
 import argparse
 import asyncio
 import logging
@@ -17,6 +19,9 @@ import sqlalchemy.orm
 from .schema import Base, Board, Category, Post, Thread, User
 
 
+logger = logging.getLogger(__name__)
+
+
 class MockDatabase:
     def __init__(self):
         self.users = []
@@ -27,6 +32,20 @@ async def add_to_database(db: sqlalchemy.orm.session.Session, item: dict):
     type_ = item["type"]
     if type_ == "user":
         pass
+    elif type_ == "category":
+        pass
+    elif type_ == "board":
+        pass
+    elif type_ == "thread":
+        pass
+    elif type_ == "post":
+        pass
+    elif type_ == "poll":
+        pass
+    else:
+        raise ValueError("Attempted to add undefined object type to database")
+
+    logger.info()
 
 
 async def process_queues(
@@ -348,7 +367,6 @@ async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
     categories = source.findAll("div", class_="container boards")
 
     for category in categories:
-        add
         pass
 
 
@@ -362,6 +380,7 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     db = Session()
     Base.metadata.create_all(engine)
 
+    # TODO: unnecessary to get event loop?
     loop = asyncio.get_event_loop()
 
     # Queues from which elements will be consumed to populate the database.
@@ -373,6 +392,8 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     cookies = get_login_cookies(url, username, password)
 
 
+    # TODO: use asyncio *.join instead of run_until_complete?
+    # TODO: use asyncio.run instead of asyncio.run_until_complete?
     get_users_task = get_users(url, cookies, user_queue)
     get_content_task = get_content(url, cookies, content_queue)
     database_task = process_queues(db, user_queue, content_queue)
