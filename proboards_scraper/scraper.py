@@ -1,14 +1,15 @@
 # TODO: logging
-# TODO: use aiohttp instead of requests?
 import argparse
 import asyncio
+import http
 import logging
 import os
 import pathlib
-import requests
 import sys
 import time
-from typing import Tuple
+from typing import List, Tuple
+
+import aiohttp
 
 import bs4
 import selenium.webdriver
@@ -45,7 +46,7 @@ async def add_to_database(db: sqlalchemy.orm.session.Session, item: dict):
     else:
         raise ValueError("Attempted to add undefined object type to database")
 
-    logger.info()
+    #logger.info()
 
 
 async def process_queues(
@@ -68,12 +69,15 @@ async def process_queues(
         if user is None:
             all_users_added = True
         else:
-            success = await add_user_to_database(db, user)
+            success = await add_to_database(db, user)
 
 
 def get_login_cookies(
     home_url: str, username: str, password: str, page_load_wait: int = 1
 ) -> dict:
+    """
+    TODO
+    """
     chrome_opts = selenium.webdriver.ChromeOptions()
     chrome_opts.headless = True
     driver = selenium.webdriver.Chrome(options=chrome_opts)
@@ -116,49 +120,48 @@ def get_login_cookies(
     submit_input.click()
     time.sleep(page_load_wait)
 
-    # Get cookies from selenium driver and add to requests session.
     cookies = driver.get_cookies()
     return cookies
 
 
-def get_login_session(cookies: dict) -> requests.sessions.Session:
-    sess = requests.Session()
+def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
+    """
+    TODO
+    """
+    sess = aiohttp.ClientSession()
 
+    morsels = {}
     for cookie in cookies:
-        # https://docs.python-requests.org/en/latest/_modules/requests/cookies/#RequestsCookieJar
-        cookie_dict = {
-            "name": cookie["name"],
-            "value": cookie["value"],
-            "domain": cookie["domain"],
-            "rest": {
-                "HttpOnly": cookie["httpOnly"]
-            },
-            "path": cookie["path"],
-            "secure": cookie["secure"],
-        }
+        # https://docs.python.org/3/library/http.cookies.html#morsel-objects
+        morsel = http.cookies.Morsel()
+        morsel.set(cookie["name"], cookie["value"], cookie["value"])
+        morsel["domain"] = cookie["domain"]
+        morsel["httponly"] = cookie["httpOnly"]
+        morsel["path"] = cookie["path"]
+        morsel["secure"] = cookie["secure"]
 
-        if "expiry" in cookie:
-            cookie_dict["expires"] = cookie["expiry"]
-        sess.cookies.set(**cookie_dict)
+        # NOTE: ignore expires field; if it's absent, the cookie remains
+        # valid for the duration of the session.
+        #if "expiry" in cookie:
+        #    morsel["expires"] = cookie["expiry"]
+
+        morsels[cookie["name"]] = morsel
+
+    sess.cookie_jar.update_cookies(morsels)
 
     return sess
 
 
-async def get_source(url: str, cookies: dict = None) -> bs4.BeautifulSoup:
-    loop = asyncio.get_running_loop()
-
-    if cookies:
-        # Create a login session with the provided authentication cookies
-        # before getting the page at `url`.
-        sess = get_login_session(cookies)
-        future = loop.run_in_executor(None, sess.get, url)
-    else:
-        future = loop.run_in_executor(None, requests.get, url)
-
-    response = await future
-
+async def get_source(
+    url: str, sess: aiohttp.ClientSession
+) -> bs4.BeautifulSoup:
+    """
+    TODO
+    """
     # TODO: check response HTTP status code
-    return bs4.BeautifulSoup(response.text, "html.parser")
+    resp = await sess.get(url)
+    text = await resp.text()
+    return bs4.BeautifulSoup(text, "html.parser")
 
 
 def scrape_board(board: bs4.element.Tag):
@@ -199,7 +202,9 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
+async def _get_user(
+    url: str, sess: aiohttp.ClientSession, user_queue: asyncio.Queue
+):
     """
     TODO
     """
@@ -212,7 +217,7 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
         "user_number": int(os.path.split(url)[1])
     }
 
-    source = await get_source(url, cookies=cookies)
+    source = await get_source(url, sess)
     user_container = source.find("div", {"class": "show-user"})
 
     # Get display name and group.
@@ -227,6 +232,10 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     user["group"] = children[3].strip()
 
     # Get username and last online datetime.
+
+    # TODO: this does not work correctly for the profile of the currently
+    # logged-in user.
+
     controls = user_container.find("div", class_="float-right controls")
     user_datetime = controls.find("div", class_="float-right clear pad-top")
     children = [child for child in user_datetime.children]
@@ -326,21 +335,24 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     return user
 
 
-async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
+async def get_users(
+    url: str, sess: aiohttp.ClientSession, user_queue: asyncio.Queue
+):
     """
     url: Site base URL.
-    cookies: Cookies dict for login authentication.
+    sess: Login session.
+    user_queue:
     """
     members_page_url = f"{url}/members"
     member_hrefs = []
 
-    source = await get_source(members_page_url, cookies=cookies)
+    source = await get_source(members_page_url, sess)
     _member_hrefs, next_href = _get_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{url}{next_href}"
-        source = await get_source(next_url, cookies=cookies)
+        source = await get_source(next_url, sess)
         _member_hrefs, next_href = _get_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
@@ -350,7 +362,7 @@ async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
     tasks = []
 
     for member_url in member_urls:
-        task = loop.create_task(_get_user(member_url, cookies, user_queue))
+        task = loop.create_task(_get_user(member_url, sess, user_queue))
         tasks.append(task)
 
     await asyncio.wait(tasks)
@@ -391,13 +403,17 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     # Get cookies for parts of the site requiring login authentication.
     cookies = get_login_cookies(url, username, password)
 
+    # Create a persistent aiohttp login session from the cookies.
+    sess = get_login_session(cookies)
 
     # TODO: use asyncio *.join instead of run_until_complete?
     # TODO: use asyncio.run instead of asyncio.run_until_complete?
-    get_users_task = get_users(url, cookies, user_queue)
-    get_content_task = get_content(url, cookies, content_queue)
+    get_users_task = get_users(url, sess, user_queue)
+    get_content_task = get_content(url, sess, content_queue)
     database_task = process_queues(db, user_queue, content_queue)
 
     task_group = asyncio.gather(get_users_task, database_task)
+    
+    # TODO: use async.run instead of loop.run_until_complete?
     loop.run_until_complete(task_group)
 
