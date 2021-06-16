@@ -1,3 +1,4 @@
+# TODO: should numbers be the primary keys?
 from sqlalchemy import (
     Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
 )
@@ -67,7 +68,7 @@ class User(Base):
 
     # One-to-many mapping of a user and all posts they've made or threads
     # they've started.
-    posts = relationship("Post")
+    posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
 
 
@@ -168,6 +169,7 @@ class Post(Base):
     id = Column("id", Integer, primary_key=True)
     date = Column("date", String)
     last_edited = Column("last_edited", String)
+    number = Column("number", Integer, nullable=False, unique=True)
     message = Column("message", String)
     url = Column("url", String)
 
