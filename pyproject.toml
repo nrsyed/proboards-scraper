@@ -11,6 +11,7 @@ bs4 = "^0.0.1"
 selenium = "^3.141.0"
 SQLAlchemy = "^1.4.14"
 requests = "^2.25.1"
+aiohttp = "^3.7.4"
 
 [tool.poetry.dev-dependencies]
 

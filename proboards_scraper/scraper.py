@@ -1,42 +1,88 @@
+# TODO: close aiohttp client session
+# TODO: logging
 import argparse
 import asyncio
+import concurrent.futures
+import http
 import logging
+import os
 import pathlib
-import requests
 import sys
 import time
-from typing import Tuple
+from typing import Any, List, Tuple, Union
+
+import aiohttp
 
 import bs4
 import selenium.webdriver
+import sqlalchemy
+import sqlalchemy.orm
+
+#from .schema import Base, Board, Category, Poll, Post, Thread, User
+from .schema import Base, Board, Category, Post, Thread, User
 
 
-class MockDatabase:
-    def __init__(self):
-        self.users = []
+logger = logging.getLogger(__name__)
 
 
-async def add_user_to_database(db: MockDatabase, user: dict):
+def _add_to_database(db: sqlalchemy.orm.Session, item: dict):
+    """
+    Helper function for :func:`add_to_database`. Because SQLite objects
+    created in a thread can only be used in that same thread, this function
+    (callable in a separate thread by `loop.run_in_executor` from
+    :func:`add_to_database`) handles everything related to creating, querying,
+    and/or adding a given database item.
+    """
+    type_ = item["type"]
+    del item["type"]
+
+    item_type_to_db_table_metaclass = {
+        "user": User,
+        "category": Category,
+        "board": Board,
+        "thread": Thread,
+        "post": Post,
+        "poll": None # TODO
+    }
+
+    # Instantiate a database object from the database table metaclass.
+    DBTableMetaclass = item_type_to_db_table_metaclass[type_]
+    obj = DBTableMetaclass(**item)
+
+    if type_ != "poll":
+        query = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
+    else:
+        pass
+
+    # TODO: update an existing object or just skip?
+    if query is None:
+        db.add(obj)
+        db.commit()
+
+
+async def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     """
     TODO
     """
-    db.users.append(user)
-    await asyncio.sleep(0.2)
-    return True
+    # TODO: use a custom threadpool with a single worker to avoid SQLite
+    # multiple simultaneous writes?
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _add_to_database, db, item)
+
 
 async def process_queues(
-    db_path: pathlib.Path, user_queue: asyncio.Queue, content_queue: asyncio.Queue
+    db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
+    content_queue: asyncio.Queue
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
     given database. This function first adds all users to the database (since
-    users are referenced by all other content). Content is heirarchical (boards
-    are added to the queue before threads, threads before posts, etc.); thus,
-    each content piece's parent will have been added to the database earlier in
-    the queue.
+    users are referenced by all other content). Content is heirarchical (a
+    given board is added to the queue before the threads it contains, a given
+    thread is added to the queue before the posts it contains, etc.). Thus,
+    the parent of each piece of content (if any) will have been added to the
+    database earlier in the queue.
     """
-    x = MockDatabase()
-
     all_users_added = False
     while not all_users_added:
         user = await user_queue.get()
@@ -44,12 +90,15 @@ async def process_queues(
         if user is None:
             all_users_added = True
         else:
-            success = await add_user_to_database(x, user)
+            success = await add_to_database(db, user)
 
 
 def get_login_cookies(
     home_url: str, username: str, password: str, page_load_wait: int = 1
 ) -> dict:
+    """
+    TODO
+    """
     chrome_opts = selenium.webdriver.ChromeOptions()
     chrome_opts.headless = True
     driver = selenium.webdriver.Chrome(options=chrome_opts)
@@ -92,49 +141,48 @@ def get_login_cookies(
     submit_input.click()
     time.sleep(page_load_wait)
 
-    # Get cookies from selenium driver and add to requests session.
     cookies = driver.get_cookies()
     return cookies
 
 
-def get_login_session(cookies: dict) -> requests.sessions.Session:
-    sess = requests.Session()
+def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
+    """
+    TODO
+    """
+    sess = aiohttp.ClientSession()
 
+    morsels = {}
     for cookie in cookies:
-        # https://docs.python-requests.org/en/latest/_modules/requests/cookies/#RequestsCookieJar
-        cookie_dict = {
-            "name": cookie["name"],
-            "value": cookie["value"],
-            "domain": cookie["domain"],
-            "rest": {
-                "HttpOnly": cookie["httpOnly"]
-            },
-            "path": cookie["path"],
-            "secure": cookie["secure"],
-        }
+        # https://docs.python.org/3/library/http.cookies.html#morsel-objects
+        morsel = http.cookies.Morsel()
+        morsel.set(cookie["name"], cookie["value"], cookie["value"])
+        morsel["domain"] = cookie["domain"]
+        morsel["httponly"] = cookie["httpOnly"]
+        morsel["path"] = cookie["path"]
+        morsel["secure"] = cookie["secure"]
 
-        if "expiry" in cookie:
-            cookie_dict["expires"] = cookie["expiry"]
-        sess.cookies.set(**cookie_dict)
+        # NOTE: ignore expires field; if it's absent, the cookie remains
+        # valid for the duration of the session.
+        #if "expiry" in cookie:
+        #    morsel["expires"] = cookie["expiry"]
+
+        morsels[cookie["name"]] = morsel
+
+    sess.cookie_jar.update_cookies(morsels)
 
     return sess
 
 
-async def get_source(url: str, cookies: dict = None) -> bs4.BeautifulSoup:
-    loop = asyncio.get_running_loop()
-
-    if cookies:
-        # Create a login session with the provided authentication cookies
-        # before getting the page at `url`.
-        sess = get_login_session(cookies)
-        future = loop.run_in_executor(None, sess.get, url)
-    else:
-        future = loop.run_in_executor(None, requests.get, url)
-
-    response = await future
-
+async def get_source(
+    url: str, sess: aiohttp.ClientSession
+) -> bs4.BeautifulSoup:
+    """
+    TODO
+    """
     # TODO: check response HTTP status code
-    return bs4.BeautifulSoup(response.text, "html.parser")
+    resp = await sess.get(url)
+    text = await resp.text()
+    return bs4.BeautifulSoup(text, "html.parser")
 
 
 def scrape_board(board: bs4.element.Tag):
@@ -175,10 +223,22 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
-    user = {}
+async def _get_user(
+    url: str, sess: aiohttp.ClientSession, user_queue: asyncio.Queue
+):
+    """
+    TODO
+    """
+    # Get user number from URL, eg, "https://xyz.proboards.com/user/42" has
+    # user number 42. We can exploit os.path.split() to grab everything right
+    # of the last backslash.
+    user = {
+        "type": "user",
+        "url": url,
+        "number": int(os.path.split(url)[1])
+    }
 
-    source = await get_source(url, cookies=cookies)
+    source = await get_source(url, sess)
     user_container = source.find("div", {"class": "show-user"})
 
     # Get display name and group.
@@ -205,6 +265,11 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
                 lastonline_block = children[i+1]
                 unix_ts = lastonline_block.find("abbr")["data-timestamp"]
                 user["last_online"] = unix_ts
+            elif child.strip() == "Member is Online":
+                # This will be the case for the aiohttp session's logged-in
+                # user (and for any other user that happens to be logged in).
+                unix_ts = str(int(time.time()))
+                user["last_online"] = unix_ts
 
     # Get rest of user info from the table in the user status form.
     status_form = user_container.find(
@@ -220,6 +285,13 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     # contains another table, where each row contains two columns: the first
     # is a heading specifying the type of info (eg, "Email:"), and the second
     # contains its value.
+
+    # NOTE: for the session's logged-in user, the first row contains a
+    # "status update" form input, which we identify and delete if necessary.
+    status_input = content_boxes[0].find("td", class_="status-input")
+    if status_input:
+        content_boxes.pop(0)
+
     for row in content_boxes[0].find_all("tr"):
         row_data = row.find_all("td")
         heading = row_data[0].text.strip().rstrip(":")
@@ -240,8 +312,8 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
         elif heading == "Location":
             user["location"] = val.text
         elif heading == "Posts":
-            # Remove commas from post count (eg, "1500" vs "1,500").
-            user["num_posts"] = int(val.text.replace(",", ""))
+            # Remove commas from post count (eg, "1,500" to "1500").
+            user["post_count"] = int(val.text.replace(",", ""))
         elif heading == "Web Site":
             website_anchor = val.find("a")
             user["website_url"] = website_anchor.get("href")
@@ -272,7 +344,7 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
         ):
             # Construct the instant messenger string that will be inserted
             # into the database. Each messenger label has the form
-            #"{messenger}:", eg, "AIM:" and the next tag (sibling) is the
+            # "{messenger}:", eg, "AIM:", and the next tag (sibling) is the
             # messenger screen name. The constructed string is of the form
             # "{messenger1}:{screenname1};{messenger2}:{screenname2}:..."
             # where each messenger type is delimited by a semicolon, eg:
@@ -292,21 +364,24 @@ async def _get_user(url: str, cookies: dict, user_queue: asyncio.Queue):
     return user
 
 
-async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
+async def get_users(
+    url: str, sess: aiohttp.ClientSession, user_queue: asyncio.Queue
+):
     """
     url: Site base URL.
-    cookies: Cookies dict for login authentication.
+    sess: Login session.
+    user_queue:
     """
     members_page_url = f"{url}/members"
     member_hrefs = []
 
-    source = await get_source(members_page_url, cookies=cookies)
+    source = await get_source(members_page_url, sess)
     _member_hrefs, next_href = _get_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{url}{next_href}"
-        source = await get_source(next_url, cookies=cookies)
+        source = await get_source(next_url, sess)
         _member_hrefs, next_href = _get_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
@@ -316,7 +391,7 @@ async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
     tasks = []
 
     for member_url in member_urls:
-        task = loop.create_task(_get_user(member_url, cookies, user_queue))
+        task = loop.create_task(_get_user(member_url, sess, user_queue))
         tasks.append(task)
 
     await asyncio.wait(tasks)
@@ -325,11 +400,26 @@ async def get_users(url: str, cookies: dict, user_queue: asyncio.Queue):
     return users
 
 
-def scrape_site(url: str, username: str, password: str):
+async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
+    """
+    Scrape all categories/boards from the main page.
+    """
+    source = get_source(url)
+    categories = source.findAll("div", class_="container boards")
+
+    for category in categories:
+        pass
+
+
+def scrape_site(url: str, username: str, password: str, db_path: str):
     """
     TODO
     """
-    loop = asyncio.get_event_loop()
+    # Open database connection and initialize database.
+    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
+    Session = sqlalchemy.orm.sessionmaker(engine)
+    db = Session()
+    Base.metadata.create_all(engine)
 
     # Queues from which elements will be consumed to populate the database.
     # Users will be added before other site content.
@@ -339,16 +429,26 @@ def scrape_site(url: str, username: str, password: str):
     # Get cookies for parts of the site requiring login authentication.
     cookies = get_login_cookies(url, username, password)
 
-    get_users_task = get_users(url, cookies, user_queue)
-    #get_content_task = 
-    database_task = process_queues(None, user_queue, content_queue)
+    # Create a persistent aiohttp login session from the cookies.
+    sess = get_login_session(cookies)
+
+    # TODO: use asyncio *.join instead of run_until_complete?
+    # TODO: use asyncio.run instead of asyncio.run_until_complete?
+    get_users_task = get_users(url, sess, user_queue)
+    #get_content_task = get_content(url, sess, content_queue)
+    database_task = process_queues(db, user_queue, content_queue)
 
     task_group = asyncio.gather(get_users_task, database_task)
+    
+    # TODO: use async.run instead of loop.run_until_complete?
+    loop = asyncio.get_event_loop()
+
+    # Use a single-worker thread pool for performing database queries/calls.
+    # Limiting the pool to a single worker allows us to run otherwise blocking
+    # sqlite database calls in a separate thread (with `loop.run_in_executor`)
+    # while avoiding concurrent write attempts from multiple threads, which
+    # sqlite does not support.
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    loop.set_default_executor(pool)
+
     loop.run_until_complete(task_group)
-
-    # TODO: move this to dedicated function
-    #source = get_source(url)
-    #categories = source.findAll("div", class_="container boards")
-
-    #for category in categories:
-    #    scrape_category(category)
