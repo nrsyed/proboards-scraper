@@ -1,13 +1,15 @@
+# TODO: close aiohttp client session
 # TODO: logging
 import argparse
 import asyncio
+import concurrent.futures
 import http
 import logging
 import os
 import pathlib
 import sys
 import time
-from typing import List, Tuple
+from typing import Any, List, Tuple, Union
 
 import aiohttp
 
@@ -23,45 +25,64 @@ from .schema import Base, Board, Category, Post, Thread, User
 logger = logging.getLogger(__name__)
 
 
-class MockDatabase:
-    def __init__(self):
-        self.users = []
-        self.categories = []
-
-
-async def add_to_database(db: sqlalchemy.orm.session.Session, item: dict):
+def _add_to_database(db: sqlalchemy.orm.Session, item: dict):
+    """
+    Helper function for :func:`add_to_database`. Because SQLite objects
+    created in a thread can only be used in that same thread, this function
+    (callable in a separate thread by `loop.run_in_executor` from
+    :func:`add_to_database`) handles everything related to creating, querying,
+    and/or adding a given database item.
+    """
     type_ = item["type"]
-    if type_ == "user":
-        pass
-    elif type_ == "category":
-        pass
-    elif type_ == "board":
-        pass
-    elif type_ == "thread":
-        pass
-    elif type_ == "post":
-        pass
-    elif type_ == "poll":
-        pass
-    else:
-        raise ValueError("Attempted to add undefined object type to database")
+    del item["type"]
 
-    #logger.info()
+    item_type_to_db_table_metaclass = {
+        "user": User,
+        "category": Category,
+        "board": Board,
+        "thread": Thread,
+        "post": Post,
+        "poll": None # TODO
+    }
+
+    # Instantiate a database object from the database table metaclass.
+    DBTableMetaclass = item_type_to_db_table_metaclass[type_]
+    obj = DBTableMetaclass(**item)
+
+    if type_ != "poll":
+        query = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
+    else:
+        pass
+
+    # TODO: update an existing object or just skip?
+    if query is None:
+        db.add(obj)
+        db.commit()
+
+
+async def add_to_database(db: sqlalchemy.orm.Session, item: dict):
+    """
+    TODO
+    """
+    # TODO: use a custom threadpool with a single worker to avoid SQLite
+    # multiple simultaneous writes?
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _add_to_database, db, item)
 
 
 async def process_queues(
-    db_path: pathlib.Path, user_queue: asyncio.Queue, content_queue: asyncio.Queue
+    db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
+    content_queue: asyncio.Queue
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
     given database. This function first adds all users to the database (since
-    users are referenced by all other content). Content is heirarchical (boards
-    are added to the queue before threads, threads before posts, etc.); thus,
-    each content piece's parent will have been added to the database earlier in
-    the queue.
+    users are referenced by all other content). Content is heirarchical (a
+    given board is added to the queue before the threads it contains, a given
+    thread is added to the queue before the posts it contains, etc.). Thus,
+    the parent of each piece of content (if any) will have been added to the
+    database earlier in the queue.
     """
-    db = MockDatabase()
-
     all_users_added = False
     while not all_users_added:
         user = await user_queue.get()
@@ -214,7 +235,7 @@ async def _get_user(
     user = {
         "type": "user",
         "url": url,
-        "user_number": int(os.path.split(url)[1])
+        "number": int(os.path.split(url)[1])
     }
 
     source = await get_source(url, sess)
@@ -323,7 +344,7 @@ async def _get_user(
         ):
             # Construct the instant messenger string that will be inserted
             # into the database. Each messenger label has the form
-            #"{messenger}:", eg, "AIM:" and the next tag (sibling) is the
+            # "{messenger}:", eg, "AIM:", and the next tag (sibling) is the
             # messenger screen name. The constructed string is of the form
             # "{messenger1}:{screenname1};{messenger2}:{screenname2}:..."
             # where each messenger type is delimited by a semicolon, eg:
@@ -400,9 +421,6 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     db = Session()
     Base.metadata.create_all(engine)
 
-    # TODO: unnecessary to get event loop?
-    loop = asyncio.get_event_loop()
-
     # Queues from which elements will be consumed to populate the database.
     # Users will be added before other site content.
     user_queue = asyncio.Queue()
@@ -417,11 +435,20 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     # TODO: use asyncio *.join instead of run_until_complete?
     # TODO: use asyncio.run instead of asyncio.run_until_complete?
     get_users_task = get_users(url, sess, user_queue)
-    get_content_task = get_content(url, sess, content_queue)
+    #get_content_task = get_content(url, sess, content_queue)
     database_task = process_queues(db, user_queue, content_queue)
 
     task_group = asyncio.gather(get_users_task, database_task)
     
     # TODO: use async.run instead of loop.run_until_complete?
-    loop.run_until_complete(task_group)
+    loop = asyncio.get_event_loop()
 
+    # Use a single-worker thread pool for performing database queries/calls.
+    # Limiting the pool to a single worker allows us to run otherwise blocking
+    # sqlite database calls in a separate thread (with `loop.run_in_executor`)
+    # while avoiding concurrent write attempts from multiple threads, which
+    # sqlite does not support.
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    loop.set_default_executor(pool)
+
+    loop.run_until_complete(task_group)
