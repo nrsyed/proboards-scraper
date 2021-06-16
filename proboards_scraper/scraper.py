@@ -232,10 +232,6 @@ async def _get_user(
     user["group"] = children[3].strip()
 
     # Get username and last online datetime.
-
-    # TODO: this does not work correctly for the profile of the currently
-    # logged-in user.
-
     controls = user_container.find("div", class_="float-right controls")
     user_datetime = controls.find("div", class_="float-right clear pad-top")
     children = [child for child in user_datetime.children]
@@ -247,6 +243,11 @@ async def _get_user(
                 # Get Unix timestamp string from <abbr> tag.
                 lastonline_block = children[i+1]
                 unix_ts = lastonline_block.find("abbr")["data-timestamp"]
+                user["last_online"] = unix_ts
+            elif child.strip() == "Member is Online":
+                # This will be the case for the aiohttp session's logged-in
+                # user (and for any other user that happens to be logged in).
+                unix_ts = str(int(time.time()))
                 user["last_online"] = unix_ts
 
     # Get rest of user info from the table in the user status form.
@@ -263,6 +264,13 @@ async def _get_user(
     # contains another table, where each row contains two columns: the first
     # is a heading specifying the type of info (eg, "Email:"), and the second
     # contains its value.
+
+    # NOTE: for the session's logged-in user, the first row contains a
+    # "status update" form input, which we identify and delete if necessary.
+    status_input = content_boxes[0].find("td", class_="status-input")
+    if status_input:
+        content_boxes.pop(0)
+
     for row in content_boxes[0].find_all("tr"):
         row_data = row.find_all("td")
         heading = row_data[0].text.strip().rstrip(":")
