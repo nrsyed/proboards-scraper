@@ -52,14 +52,11 @@ def pbd_cli():
     action = None
     value = None
 
-    # Determine which action was selected (and its value, if any provided,
-    # else ``None``).
+    # Determine which action was selected (and its value, if any provided).
     for _action in ("user", "board"):
         if args[_action] != -1:
             action = _action
             value = args[_action]
-
-    query_func = None
 
     if action == "user":
         result = proboards_scraper.database.query_users(db, user_num=value)
@@ -80,4 +77,4 @@ def pbd_cli():
     elif action == "board":
         pass
     else:
-        raise ValueError()
+        raise ValueError("Invalid action")
