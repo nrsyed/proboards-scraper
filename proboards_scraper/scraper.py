@@ -18,20 +18,18 @@ import selenium.webdriver
 import sqlalchemy
 import sqlalchemy.orm
 
-#from .schema import Base, Board, Category, Poll, Post, Thread, User
-from .schema import Base, Board, Category, Post, Thread, User
+import proboards_scraper.database
+from proboards_scraper.database import (
+    Base, Board, Category, Post, Thread, User,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-def _add_to_database(db: sqlalchemy.orm.Session, item: dict):
+def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     """
-    Helper function for :func:`add_to_database`. Because SQLite objects
-    created in a thread can only be used in that same thread, this function
-    (callable in a separate thread by `loop.run_in_executor` from
-    :func:`add_to_database`) handles everything related to creating, querying,
-    and/or adding a given database item.
+    TODO
     """
     type_ = item["type"]
     del item["type"]
@@ -50,29 +48,26 @@ def _add_to_database(db: sqlalchemy.orm.Session, item: dict):
     obj = DBTableMetaclass(**item)
 
     if type_ != "poll":
-        query = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
+        result = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
     else:
         pass
 
     # TODO: update an existing object or just skip?
-    if query is None:
+    if result is None:
         db.add(obj)
         db.commit()
+        logger.debug(f"Adding {type_} {item['name']} to database")
+    else:
+        logger.debug(
+            f"{type_.title()} {item['name']} already exists in database"
+        )
 
-
-async def add_to_database(db: sqlalchemy.orm.Session, item: dict):
-    """
-    TODO
-    """
-    # TODO: use a custom threadpool with a single worker to avoid SQLite
-    # multiple simultaneous writes?
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _add_to_database, db, item)
+    return True
 
 
 async def process_queues(
     db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
-    content_queue: asyncio.Queue
+    content_queue: asyncio.Queue, sess: aiohttp.ClientSession
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
@@ -82,6 +77,10 @@ async def process_queues(
     thread is added to the queue before the posts it contains, etc.). Thus,
     the parent of each piece of content (if any) will have been added to the
     database earlier in the queue.
+
+    Args:
+        sess: This is provided so the session can be closed after all content
+            has been processed from the queues.
     """
     all_users_added = False
     while not all_users_added:
@@ -90,7 +89,9 @@ async def process_queues(
         if user is None:
             all_users_added = True
         else:
-            success = await add_to_database(db, user)
+            success = add_to_database(db, user)
+
+    await sess.close()
 
 
 def get_login_cookies(
@@ -415,11 +416,8 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     """
     TODO
     """
-    # Open database connection and initialize database.
-    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
-    Session = sqlalchemy.orm.sessionmaker(engine)
-    db = Session()
-    Base.metadata.create_all(engine)
+    # Open database connection and get database session.
+    db = proboards_scraper.database.get_session(db_path)
 
     # Queues from which elements will be consumed to populate the database.
     # Users will be added before other site content.
@@ -436,13 +434,15 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     # TODO: use asyncio.run instead of asyncio.run_until_complete?
     get_users_task = get_users(url, sess, user_queue)
     #get_content_task = get_content(url, sess, content_queue)
-    database_task = process_queues(db, user_queue, content_queue)
+    database_task = process_queues(db, user_queue, content_queue, sess)
 
     task_group = asyncio.gather(get_users_task, database_task)
     
     # TODO: use async.run instead of loop.run_until_complete?
     loop = asyncio.get_event_loop()
 
+    # TODO: but sharing the db engine in a thread where it wasn't created
+    # causes fatal error.
     # Use a single-worker thread pool for performing database queries/calls.
     # Limiting the pool to a single worker allows us to run otherwise blocking
     # sqlite database calls in a separate thread (with `loop.run_in_executor`)
