@@ -1,7 +1,7 @@
 import argparse
+import logging
 
 import proboards_scraper
-
 
 def cli():
     parser = argparse.ArgumentParser()
@@ -12,6 +12,9 @@ def cli():
         "-d", "--database", type=str, default="forum.db",
         help="Path to database file"
     )
+
+    logging.basicConfig(level=logging.DEBUG)
+
     args = parser.parse_args()
 
     args.url = args.url.rstrip("/")
