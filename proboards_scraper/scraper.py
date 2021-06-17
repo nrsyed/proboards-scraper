@@ -18,8 +18,9 @@ import selenium.webdriver
 import sqlalchemy
 import sqlalchemy.orm
 
-from proboards_scraper.database.schema import (
-    Base, Board, Category, Post, Thread, User
+import proboards_scraper.database
+from proboards_scraper.database import (
+    Base, Board, Category, Post, Thread, User,
 )
 
 
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     """
+    TODO
     """
     type_ = item["type"]
     del item["type"]
@@ -40,7 +42,6 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
         "post": Post,
         "poll": None # TODO
     }
-
 
     # Instantiate a database object from the database table metaclass.
     DBTableMetaclass = item_type_to_db_table_metaclass[type_]
@@ -415,11 +416,8 @@ def scrape_site(url: str, username: str, password: str, db_path: str):
     """
     TODO
     """
-    # Open database connection and initialize database.
-    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
-    Session = sqlalchemy.orm.sessionmaker(engine)
-    db = Session()
-    Base.metadata.create_all(engine)
+    # Open database connection and get database session.
+    db = proboards_scraper.database.get_session(db_path)
 
     # Queues from which elements will be consumed to populate the database.
     # Users will be added before other site content.
