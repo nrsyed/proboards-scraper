@@ -48,12 +48,12 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     obj = DBTableMetaclass(**item)
 
     if type_ != "poll":
-        query = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
+        result = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
     else:
         pass
 
     # TODO: update an existing object or just skip?
-    if query is None:
+    if result is None:
         db.add(obj)
         db.commit()
         logger.debug(f"Adding {type_} {item['name']} to database")
