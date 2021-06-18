@@ -5,9 +5,36 @@ from pprint import pprint
 import proboards_scraper
 
 
-def configure_logging():
+def configure_logging(verbosity: int = 2):
+    """
+    Verbosity levels:
+    0: silent (only show CRITICAL)
+    1: quiet (show proboards_scraper ERROR, imported module ERROR)
+    2: normal (show proboards_scraper INFO, imported module ERROR)
+    3: verbose (show proboards_scraper DEBUG, imported module ERROR)
+    4: vverbose (show proboards_scraper DEBUG, imported module INFO)
+    5: vvverbose (show proboards_scraper DEBUG, imported module DEBUG)
+
+    """
+    scraper_log_level = logging.CRITICAL
+    import_log_level = logging.CRITICAL
+
+    if verbosity >= 1:
+        scraper_log_level = logging.ERROR
+        import_log_level = logging.ERROR
+
+    if verbosity >= 3:
+        scraper_log_level = logging.DEBUG
+    elif verbosity >= 2:
+        scraper_log_level = logging.INFO
+
+    if verbosity == 5:
+        import_log_level = logging.DEBUG
+    elif verbosity >= 4:
+        import_log_level = logging.INFO
+
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=scraper_log_level,
         format="[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
         datefmt="%H:%M:%S"
     )
@@ -15,7 +42,7 @@ def configure_logging():
     # Disable "verbose" debug/info logging for imported modules.
     for module in ["asyncio", "selenium", "urllib3"]:
         module_logger = logging.getLogger(module)
-        module_logger.setLevel(logging.ERROR)
+        module_logger.setLevel(import_log_level)
 
 
 def pbs_cli():
@@ -30,9 +57,13 @@ def pbs_cli():
         "-d", "--database", type=str, default="forum.db",
         help="Path to database file"
     )
+    parser.add_argument(
+        "-v", "--verbosity", type=int, choices=[0, 1, 2, 3, 4, 5], default=2,
+        help="Verbosity level from 0 (silent) to 5 (full debug); default 2"
+    )
     args = parser.parse_args()
 
-    configure_logging()
+    configure_logging(args.verbosity)
 
     args.url = args.url.rstrip("/")
     proboards_scraper.scrape_site(
