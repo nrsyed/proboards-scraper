@@ -58,6 +58,11 @@ def pbs_cli():
         help="Path to database file"
     )
     parser.add_argument(
+        "-U", "--no-users", action="store_true", dest="skip_users",
+        help="Do not grab user profiles (only use this options if a database "
+        "exists and users have already been added to it)"
+    )
+    parser.add_argument(
         "-v", "--verbosity", type=int, choices=[0, 1, 2, 3, 4, 5], default=2,
         help="Verbosity level from 0 (silent) to 5 (full debug); default 2"
     )
@@ -67,7 +72,8 @@ def pbs_cli():
 
     args.url = args.url.rstrip("/")
     proboards_scraper.scrape_site(
-        args.url, args.username, args.password, args.database
+        args.url, args.username, args.password, args.database,
+        skip_users=args.skip_users
     )
 
 

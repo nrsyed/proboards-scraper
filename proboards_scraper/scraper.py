@@ -1,4 +1,3 @@
-# TODO: logging
 import argparse
 import asyncio
 import concurrent.futures
@@ -90,6 +89,15 @@ async def process_queues(
                 all_users_added = True
             else:
                 success = add_to_database(db, user)
+
+    all_content_added = False
+    while not all_content_added:
+        content = await content_queue.get()
+
+        if content is None:
+            all_content_added = True
+        else:
+            pass
 
     await sess.close()
 
@@ -365,7 +373,7 @@ async def _get_user(
             user["instant_messengers"] = messenger_str
 
     await user_queue.put(user)
-    logger.info(f"Got user profile info for user {user['name']}")
+    logger.debug(f"Got user profile info for user {user['name']}")
     return user
 
 
@@ -420,6 +428,8 @@ async def get_content(
     for category in categories:
         pass
 
+    await content_queue.put(None)
+
 
 def scrape_site(
     url: str, username: str, password: str, db_path: str,
@@ -443,11 +453,13 @@ def scrape_site(
 
     tasks = []
 
-    user_queue = None
     if not skip_users:
         user_queue = asyncio.Queue()
         users_task = get_users(url, sess, user_queue)
         tasks.append(users_task)
+    else:
+        user_queue = None
+        logger.info("Skipping user profiles")
 
     content_queue = asyncio.Queue()
     content_task = get_content(url, sess, content_queue)
