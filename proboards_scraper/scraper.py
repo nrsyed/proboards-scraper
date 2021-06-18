@@ -426,13 +426,13 @@ async def get_content(
     categories = source.findAll("div", class_="container boards")
 
     for category in categories:
-        pass
+        title_bar = category.find("div", class_="title_wrapper")
 
     await content_queue.put(None)
 
 
 def scrape_site(
-    url: str, username: str, password: str, db_path: str,
+    url: str, db_path: str, username: str = None, password: str = None,
     skip_users: bool = False,
 ):
     """
@@ -444,12 +444,19 @@ def scrape_site(
         skip_users:
     """
     # Get cookies for parts of the site requiring login authentication.
-    logger.info(f"Logging in to {url}")
-    cookies = get_login_cookies(url, username, password)
 
-    # Create a persistent aiohttp login session from the cookies.
-    sess = get_login_session(cookies)
-    logger.info("Login successful")
+    if username and password:
+        logger.info(f"Logging in to {url}")
+        cookies = get_login_cookies(url, username, password)
+
+        # Create a persistent aiohttp login session from the cookies.
+        sess = get_login_session(cookies)
+        logger.info("Login successful")
+    else:
+        logger.info(
+            "Username and/or password not provided; proceeding without login"
+        )
+        sess = aiohttp.ClientSession()
 
     tasks = []
 
