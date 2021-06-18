@@ -50,12 +50,20 @@ def pbs_cli():
     Entrypoint for ``pbs`` (proboards scraper) tool.
     """
     parser = argparse.ArgumentParser()
+
     parser.add_argument("url", type=str, help="Homepage URL")
-    parser.add_argument("username", type=str, help="Login username")
-    parser.add_argument("password", type=str, help="Login password")
+
+    login_group = parser.add_argument_group("Login arguments")
+    login_group.add_argument(
+        "-u", "--username", type=str, help="Login username"
+    )
+    login_group.add_argument(
+        "-p", "--password", type=str, help="Login password"
+    )
+
     parser.add_argument(
         "-d", "--database", type=str, default="forum.db",
-        help="Path to database file"
+        help="Path to database file (default forum.db)"
     )
     parser.add_argument(
         "-U", "--no-users", action="store_true", dest="skip_users",
@@ -68,12 +76,22 @@ def pbs_cli():
     )
     args = parser.parse_args()
 
+    if (
+        (args.username and not args.password)
+        or (args.password and not args.username)
+    ):
+        print(
+            "If providing login credentials, both username and password "
+            "are required"
+        )
+        exit(1)
+
     configure_logging(args.verbosity)
 
     args.url = args.url.rstrip("/")
     proboards_scraper.scrape_site(
-        args.url, args.username, args.password, args.database,
-        skip_users=args.skip_users
+        args.url, args.database, username=args.username,
+        password=args.password, skip_users=args.skip_users
     )
 
 
