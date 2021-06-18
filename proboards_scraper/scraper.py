@@ -55,10 +55,10 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     if result is None:
         db.add(obj)
         db.commit()
-        logger.debug(f"Adding {type_} {item['name']} to database")
+        logger.info(f"Added {type_} {item['name']} to database")
     else:
-        logger.debug(
-            f"{type_.title()} {item['name']} already exists in database"
+        logger.info(
+            f"{type_.title()} {item['name']} already exists in database; skipping"
         )
 
     return True
@@ -150,6 +150,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
     """
     TODO
     """
+    logger.debug("Creating aiohttp login session from cookies")
     sess = aiohttp.ClientSession()
 
     morsels = {}
@@ -171,6 +172,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
 
     sess.cookie_jar.update_cookies(morsels)
 
+    logger.debug("Added cookies to aiohttp session")
     return sess
 
 
@@ -180,6 +182,7 @@ async def get_source(
     """
     TODO
     """
+    logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
     resp = await sess.get(url)
     text = await resp.text()
@@ -362,6 +365,7 @@ async def _get_user(
             user["instant_messengers"] = messenger_str
 
     await user_queue.put(user)
+    logger.info(f"Got user profile info for user {user['name']}")
     return user
 
 
@@ -373,6 +377,8 @@ async def get_users(
     sess: Login session.
     user_queue:
     """
+    logger.info(f"Getting user profile URLs from {url}")
+
     members_page_url = f"{url}/members"
     member_hrefs = []
 
@@ -387,6 +393,7 @@ async def get_users(
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
+    logger.info(f"Found {len(member_urls)} user profile URLs")
 
     loop = asyncio.get_running_loop()
     tasks = []
@@ -401,11 +408,13 @@ async def get_users(
     return users
 
 
-async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
+async def get_content(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue
+):
     """
     Scrape all categories/boards from the main page.
     """
-    source = get_source(url)
+    source = await get_source(url, sess)
     categories = source.findAll("div", class_="container boards")
 
     for category in categories:
@@ -425,10 +434,12 @@ def scrape_site(
         skip_users:
     """
     # Get cookies for parts of the site requiring login authentication.
+    logger.info(f"Logging in to {url}")
     cookies = get_login_cookies(url, username, password)
 
     # Create a persistent aiohttp login session from the cookies.
     sess = get_login_session(cookies)
+    logger.info("Login successful")
 
     tasks = []
 
