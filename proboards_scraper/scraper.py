@@ -1,4 +1,3 @@
-# TODO: close aiohttp client session
 # TODO: logging
 import argparse
 import asyncio
@@ -66,7 +65,7 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
 
 
 async def process_queues(
-    db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
+    db: sqlalchemy.orm.Session, user_queue: Union[asyncio.Queue, None],
     content_queue: asyncio.Queue, sess: aiohttp.ClientSession
 ):
     """
@@ -82,14 +81,15 @@ async def process_queues(
         sess: This is provided so the session can be closed after all content
             has been processed from the queues.
     """
-    all_users_added = False
-    while not all_users_added:
-        user = await user_queue.get()
+    if user_queue is not None:
+        all_users_added = False
+        while not all_users_added:
+            user = await user_queue.get()
 
-        if user is None:
-            all_users_added = True
-        else:
-            success = add_to_database(db, user)
+            if user is None:
+                all_users_added = True
+            else:
+                success = add_to_database(db, user)
 
     await sess.close()
 
@@ -412,43 +412,42 @@ async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
         pass
 
 
-def scrape_site(url: str, username: str, password: str, db_path: str):
+def scrape_site(
+    url: str, username: str, password: str, db_path: str,
+    skip_users: bool = False,
+):
     """
-    TODO
+    Args:
+        url:
+        username:
+        password:
+        db_path:
+        skip_users:
     """
-    # Open database connection and get database session.
-    db = proboards_scraper.database.get_session(db_path)
-
-    # Queues from which elements will be consumed to populate the database.
-    # Users will be added before other site content.
-    user_queue = asyncio.Queue()
-    content_queue = asyncio.Queue()
-
     # Get cookies for parts of the site requiring login authentication.
     cookies = get_login_cookies(url, username, password)
 
     # Create a persistent aiohttp login session from the cookies.
     sess = get_login_session(cookies)
 
-    # TODO: use asyncio *.join instead of run_until_complete?
-    # TODO: use asyncio.run instead of asyncio.run_until_complete?
-    get_users_task = get_users(url, sess, user_queue)
-    #get_content_task = get_content(url, sess, content_queue)
+    tasks = []
+
+    user_queue = None
+    if not skip_users:
+        user_queue = asyncio.Queue()
+        users_task = get_users(url, sess, user_queue)
+        tasks.append(users_task)
+
+    content_queue = asyncio.Queue()
+    content_task = get_content(url, sess, content_queue)
+    tasks.append(content_task)
+
+    db = proboards_scraper.database.get_session(db_path)
     database_task = process_queues(db, user_queue, content_queue, sess)
+    tasks.append(database_task)
 
-    task_group = asyncio.gather(get_users_task, database_task)
-    
-    # TODO: use async.run instead of loop.run_until_complete?
-    loop = asyncio.get_event_loop()
+    task_group = asyncio.gather(*tasks)
+    asyncio.get_event_loop().run_until_complete(task_group)
 
-    # TODO: but sharing the db engine in a thread where it wasn't created
-    # causes fatal error.
-    # Use a single-worker thread pool for performing database queries/calls.
-    # Limiting the pool to a single worker allows us to run otherwise blocking
-    # sqlite database calls in a separate thread (with `loop.run_in_executor`)
-    # while avoiding concurrent write attempts from multiple threads, which
-    # sqlite does not support.
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    loop.set_default_executor(pool)
-
-    loop.run_until_complete(task_group)
+    #pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    #loop.set_default_executor(pool)
