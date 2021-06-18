@@ -113,7 +113,6 @@ class Board(Base):
     password_protected = Column("password_protected", Boolean)
     url = Column("url", String)
 
-
     sub_boards = relationship("Board")
     threads = relationship("Thread")
 

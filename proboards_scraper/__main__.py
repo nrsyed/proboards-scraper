@@ -159,6 +159,9 @@ def pbd_cli():
             if "moderators" in board:
                 mods = [user["name"] for user in board["moderators"]]
                 board["moderators"] = mods
+            if "sub_boards" in board:
+                sub = [sub["id"] for sub in board["sub_boards"]]
+                board["sub_boards"] = sub
             pprint(board)
     else:
         raise ValueError("Invalid action")

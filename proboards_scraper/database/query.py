@@ -16,9 +16,9 @@ def serialize(obj):
             if not k.startswith("_"):
                 dict_[k] = serialize(v)
 
-        # association_proxy _AssocationList items are not in
-        # Board.__dict__ and must be separately serialized.
-        if hasattr(obj, "moderators"):
+        # association_proxy._AssociationList and collections.InstrumentedList
+        # objects are not in Board.__dict__ and must be separately serialized.
+        if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
 
         return dict_
@@ -53,6 +53,11 @@ def query_boards(
 
     if board_id is not None:
         result = result.filter_by(id=board_id).first()
+        # AssociationList and InstrumentedList objects are lazily populated
+        # and not part of Board.__dict__, so we add them manually here
+        # (but only for querying a single board).
+        result.__dict__["moderators"] = list(result.moderators)
+        result.__dict__["sub_boards"] = list(result.sub_boards)
     else:
         result = result.all()
     return serialize(result)
