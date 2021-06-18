@@ -1,6 +1,7 @@
 from sqlalchemy import (
     Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
 )
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -91,11 +92,13 @@ class Board(Base):
         id (int): Board number obtained from the board URL, eg,
             ``https://yoursite.proboards.com/board/42/general`` refers to the
             "General" board having board id 42.
+        category_id (int): Category to which this board belongs.
+        description (str): Board description.
         name (str): Board name (required).
+        parent_id (int): Parent board primary key (if a sub-board).
+        password_protected (bool):
         url (str): 
 
-        category_id (int): Category to which this board belongs.
-        parent_id (int): Parent board primary key (if a sub-board).
 
         sub_boards: This board's sub-boards.
         threads: This board's threads.
@@ -103,23 +106,52 @@ class Board(Base):
     __tablename__ = "board"
 
     id = Column("id", Integer, primary_key=True, autoincrement=False)
+    category_id = Column("category_id", ForeignKey("category.id"))
+    description = Column("description", String)
     name = Column("name", String, nullable=False)
+    parent_id = Column("parent_id", ForeignKey("board.id"))
+    password_protected = Column("password_protected", Boolean)
     url = Column("url", String)
 
-    category_id = Column("category_id", ForeignKey("category.id"))
-    parent_id = Column("parent_id", ForeignKey("board.id"))
 
     sub_boards = relationship("Board")
     threads = relationship("Thread")
+
+    # TODO: moderators
+    _moderators = relationship("Moderator")
+    moderators = association_proxy("_moderators", "_users")
+
+
+class Moderator(Base):
+    """
+    This table links a user to a board they moderate. A given moderation
+    relationship (i.e., board + user combination) must be unique.
+    Attributes:
+        board_id (int): Board from ``board`` table.
+        user_id (int): User from ``user`` table.
+    """
+    __tablename__ = "moderator"
+    __table_args__ = (UniqueConstraint("board_id", "user_id"),)
+
+    board_id = Column(
+        "board_id", Integer, ForeignKey("board.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _users = relationship("User")
 
 
 class Thread(Base):
     """
     Attributes:
         id: Thread id from thread URL.
-        locked (bool):
         title (str): Thread title.
         url (str): Original URL.
+        locked (bool):
+        sticky (bool):
+        announcement (bool):
 
         board_id (int): Board (in ``board`` table) where the thread was made.
         user_id (int): User (in ``user`` table) who started the thread.
@@ -130,8 +162,10 @@ class Thread(Base):
 
     id = Column("id", Integer, primary_key=True, autoincrement=False)
 
-    # TODO: default for locked, check bool type
+    # TODO: default for locked, sticky, announcement, check bool type
+    announcement = Column("announcement", Boolean)
     locked = Column("locked", Boolean)
+    sticky = Column("sticky", Boolean)
     title = Column("title", String)
     url = Column("url", String)
 
@@ -182,3 +216,5 @@ class Post(Base):
 #        id (int):
 #    """
 #    __tablename__ = "poll"
+
+#class Moderator(Base):

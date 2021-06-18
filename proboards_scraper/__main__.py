@@ -88,7 +88,6 @@ def pbs_cli():
 
     configure_logging(args.verbosity)
 
-    args.url = args.url.rstrip("/")
     proboards_scraper.scrape_site(
         args.url, args.database, username=args.username,
         password=args.password, skip_users=args.skip_users

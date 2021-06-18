@@ -1,3 +1,4 @@
+# TODO: announcement thread (avoid visiting in every board)
 import argparse
 import asyncio
 import concurrent.futures
@@ -5,6 +6,7 @@ import http
 import logging
 import os
 import pathlib
+import re
 import sys
 import time
 from typing import Any, List, Tuple, Union
@@ -18,7 +20,7 @@ import sqlalchemy.orm
 
 import proboards_scraper.database
 from proboards_scraper.database import (
-    Base, Board, Category, Post, Thread, User,
+    Base, Board, Category, Moderator, Post, Thread, User,
 )
 
 
@@ -33,31 +35,38 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     del item["type"]
 
     item_type_to_db_table_metaclass = {
-        "user": User,
-        "category": Category,
         "board": Board,
-        "thread": Thread,
+        "category": Category,
+        "moderator": Moderator,
+        "poll": None, # TODO
         "post": Post,
-        "poll": None # TODO
+        "user": User,
+        "thread": Thread,
     }
 
     # Instantiate a database object from the database table metaclass.
     DBTableMetaclass = item_type_to_db_table_metaclass[type_]
     obj = DBTableMetaclass(**item)
 
-    if type_ != "poll":
-        result = db.query(DBTableMetaclass).filter_by(id=obj.id).first()
+    if type_ == "moderator":
+        filters = {
+            "user_id": obj.user_id,
+            "board_id": obj.board_id,
+        }
+        item_desc = f"(user {obj.user_id}, board {obj.board_id})"
     else:
-        pass
+        filters = {"id": obj.id}
+        item_desc = f"{item['name']}"
 
-    # TODO: update an existing object or just skip?
+    result = db.query(DBTableMetaclass).filter_by(**filters).first()
     if result is None:
         db.add(obj)
         db.commit()
-        logger.info(f"Added {type_} {item['name']} to database")
+        logger.info(f"{type_} {item_desc} added to database")
     else:
+        # TODO: update an existing object or just skip?
         logger.info(
-            f"{type_.title()} {item['name']} already exists in database; skipping"
+            f"{type_} {item_desc} already exists in database; skipping"
         )
 
     return True
@@ -88,6 +97,7 @@ async def process_queues(
             if user is None:
                 all_users_added = True
             else:
+                # TODO: success/failure
                 success = add_to_database(db, user)
 
     all_content_added = False
@@ -97,7 +107,7 @@ async def process_queues(
         if content is None:
             all_content_added = True
         else:
-            pass
+            success = add_to_database(db, content)
 
     await sess.close()
 
@@ -418,14 +428,83 @@ async def get_users(
 
 async def scrape_board(
     url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
-    moderators: List[int] = None
+    category_id: int = None, moderators: List[int] = None,
+    parent_id: int = None
 ):
     """
     Args:
         moderators: Optional list of moderator ids for the board (this is
             available on the main page).
     """
-    pass
+    # Board URLs take the form
+    # https://{subdomain}.proboards.com/board/{id}/{name}
+    expr = r"(.*)/board/(\d+)/.*"
+    match = re.match(expr, url)
+
+    # We get the site_url to construct sub-board URLs (if any) later.
+    site_url = match.groups()[0]
+    board_id = int(match.groups()[1])
+
+    source = await get_source(url, sess)
+
+    # Get board name and description from Information/Statistics container.
+    stats_container = source.find("div", class_="container stats")
+    
+    description = None
+    password_protected = None
+    if (
+        (not stats_container)
+        and ("This board is password protected" in str(source))
+    ):
+        container = source.find("div", class_="container")
+        title_heading = container.find("div", class_="title-bar").find("h2")
+        board_name = title_heading.text
+        password_protected = True
+    else:
+        board_name = stats_container.find("div", class_="board-name").text
+        description = stats_container.find("div", class_="board-description").text
+
+    board = {
+        "type": "board",
+        "category_id": category_id,
+        "description": description,
+        "id": board_id,
+        "name": board_name,
+        "parent_id": parent_id,
+        "password_protected": password_protected,
+        "url": url,
+    }
+    await content_queue.put(board)
+
+    if moderators:
+        for user_id in moderators:
+            moderator = {
+                "type": "moderator",
+                "user_id": user_id,
+                "board_id": board_id,
+            }
+            await content_queue.put(moderator)
+
+    # Add any sub-boards to the queue.
+    subboard_container = source.find("div", class_="container boards")
+    if subboard_container:
+        subboards = subboard_container.find("tbody").findAll("tr")
+
+        for subboard in subboards:
+            clickable = subboard.find("td", class_="main clickable")
+            link = clickable.find("span", class_="link").find("a")
+            href = link["href"]
+            subboard_url = site_url + href
+
+            await scrape_board(
+                subboard_url, sess, content_queue, category_id=category_id,
+                parent_id=board_id
+            )
+
+    # Iterate over all thread pages and add all threads to the queue.
+    thread_container = source.find("div", class_="container threads")
+    if thread_container:
+        pass
 
 
 async def get_content(
@@ -433,18 +512,54 @@ async def get_content(
 ):
     """
     Scrape all categories/boards from the main page.
+
+    Args:
+        url: Homepage URL.
     """
     source = await get_source(url, sess)
     categories = source.findAll("div", class_="container boards")
 
-    for category in categories:
+    for category_ in categories:
         # The category id is found among the tag's previous siblings and looks
         # like <a name="category-2"></a>. We want the number in the name attr.
-        category_id_tag = list(category.previous_siblings)[1]
+        category_id_tag = list(category_.previous_siblings)[1]
         category_id = int(category_id_tag["name"].split("-")[1])
 
-        title_bar = category.find("div", class_="title_wrapper")
+        title_bar = category_.find("div", class_="title_wrapper")
         category_name = title_bar.text
+
+        # Add category to database queue.
+        category = {
+            "type": "category",
+            "id": category_id,
+            "name": category_name,
+        }
+        await content_queue.put(category)
+
+        boards = category_.findAll(
+            "tr",
+            {"class": ["o-board", "board", "item"]}
+        )
+
+        for board_ in boards:
+            clickable = board_.find("td", class_="main clickable")
+            link = clickable.find("span", class_="link").find("a")
+            href = link["href"]
+            board_url = url + href
+
+            # Get list of moderators, if any.
+            mods_tag = clickable.find("p", class_="moderators")
+
+            moderator_ids = None
+            if mods_tag is not None:
+                moderator_ids = [
+                    int(a_tag["data-id"]) for a_tag in mods_tag.findAll("a")
+                ]
+
+            await scrape_board(
+                board_url, sess, content_queue, category_id=category_id,
+                moderators=moderator_ids
+            )
 
     await content_queue.put(None)
 
@@ -461,8 +576,9 @@ def scrape_site(
         db_path:
         skip_users:
     """
-    # Get cookies for parts of the site requiring login authentication.
+    url = url.rstrip("/")
 
+    # Get cookies for parts of the site requiring login authentication.
     if username and password:
         logger.info(f"Logging in to {url}")
         cookies = get_login_cookies(url, username, password)
