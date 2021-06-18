@@ -128,18 +128,18 @@ def pbd_cli():
             value = args[_action]
 
     if action == "user":
-        result = proboards_scraper.database.query_users(db, user_num=value)
+        result = proboards_scraper.database.query_users(db, user_id=value)
 
         if isinstance(result, list):
             users = []
             for user in result:
-                users.append((user["number"], user["name"]))
+                users.append((user["id"], user["name"]))
 
             users.sort(key=lambda tup: tup[0])
             for user in users:
-                user_num = user[0]
+                user_id = user[0]
                 user_name = user[1]
-                print(f"{user_num}: {user_name}")
+                print(f"{user_id}: {user_name}")
         else:
             user = result
             pprint(user)

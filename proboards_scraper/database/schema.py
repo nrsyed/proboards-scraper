@@ -10,9 +10,9 @@ Base = declarative_base()
 class User(Base):
     """
     Attributes:
-        number (int): User number obtained from the user's profile URL,
+        id (int): User number obtained from the user's profile URL,
             eg, ``https://yoursite.proboards.com/user/21`` refers to the user
-            with user number 23.
+            with user id 23.
         age (int): Optional
         birthdate (str): Optional
         date_registered (str): Unix timestamp
@@ -43,7 +43,7 @@ class User(Base):
     """
     __tablename__ = "user"
 
-    number = Column("number", Integer, primary_key=True, autoincrement=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
 
     age = Column("age", Integer)
     birthdate = Column("birthdate", String)
@@ -65,21 +65,21 @@ class User(Base):
 
     # One-to-many mapping of a user and all posts they've made or threads
     # they've started.
-    posts = relationship("Post", foreign_keys="Post.user_number")
+    posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
 
 
 class Category(Base):
     """
     Attributes:
-        number (int): Category number obtained from the main page source.
+        id (int): Category id number obtained from the main page source.
         name (str): Category name.
 
         boards: This category's boards (including sub-boards).
     """
     __tablename__ = "category"
 
-    number = Column("number", Integer, primary_key=True, autoincrement=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     name = Column("name", String, nullable=False)
 
     boards = relationship("Board")
@@ -88,26 +88,26 @@ class Category(Base):
 class Board(Base):
     """
     Attributes:
-        number (int): Board number obtained from the board URL, eg,
+        id (int): Board number obtained from the board URL, eg,
             ``https://yoursite.proboards.com/board/42/general`` refers to the
-            "General" board having board number 42.
+            "General" board having board id 42.
         name (str): Board name (required).
         url (str): 
 
-        category_number (int): Category to which this board belongs.
-        parent_number (int): Parent board primary key (if a sub-board).
+        category_id (int): Category to which this board belongs.
+        parent_id (int): Parent board primary key (if a sub-board).
 
         sub_boards: This board's sub-boards.
         threads: This board's threads.
     """
     __tablename__ = "board"
 
-    number = Column("number", Integer, primary_key=True, autoincrement=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     name = Column("name", String, nullable=False)
     url = Column("url", String)
 
-    category_number = Column("category_number", ForeignKey("category.number"))
-    parent_number = Column("parent_number", ForeignKey("board.number"))
+    category_id = Column("category_id", ForeignKey("category.id"))
+    parent_id = Column("parent_id", ForeignKey("board.id"))
 
     sub_boards = relationship("Board")
     threads = relationship("Thread")
@@ -116,30 +116,30 @@ class Board(Base):
 class Thread(Base):
     """
     Attributes:
-        number: Thread number from thread URL.
+        id: Thread id from thread URL.
         locked (bool):
         title (str): Thread title.
         url (str): Original URL.
 
-        board_number (int): Board (in ``board`` table) where the thread was made.
-        user_number (int): User (in ``user`` table) who started the thread.
+        board_id (int): Board (in ``board`` table) where the thread was made.
+        user_id (int): User (in ``user`` table) who started the thread.
 
         posts: This thread's posts.
     """
     __tablename__ = "thread"
 
-    number = Column("number", Integer, primary_key=True, autoincrement=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
 
     # TODO: default for locked, check bool type
     locked = Column("locked", Boolean)
     title = Column("title", String)
     url = Column("url", String)
 
-    board_number = Column(
-        "board_number", ForeignKey("board.number"), nullable=False
+    board_id = Column(
+        "board_id", ForeignKey("board.id"), nullable=False
     )
-    user_number = Column(
-        "user_number", ForeignKey("user.number"), nullable=False
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
     )
 
     posts = relationship("Post")
@@ -148,7 +148,7 @@ class Thread(Base):
 class Post(Base):
     """
     Attributes:
-        number (int):
+        id (int):
         date (str): When the post was made (Unix timestamp).
         last_edited (str): When the post was last edited (Unix timestamp); if
             never, this field should be null.
@@ -161,18 +161,18 @@ class Post(Base):
     """
     __tablename__ = "post"
 
-    number = Column("number", Integer, primary_key=True, autoincrement=False)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     date = Column("date", String)
     last_edited = Column("last_edited", String)
     message = Column("message", String)
     url = Column("url", String)
 
-    edit_user_number = Column("edit_user_number", ForeignKey("user.number"))
-    thread_number = Column(
-        "thread_number", ForeignKey("thread.number"), nullable=False
+    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
+    thread_id = Column(
+        "thread_id", ForeignKey("thread.id"), nullable=False
     )
-    user_number = Column(
-        "user_number", ForeignKey("user.number"), nullable=False
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
     )
 
 

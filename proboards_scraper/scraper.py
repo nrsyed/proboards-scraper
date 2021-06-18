@@ -46,7 +46,7 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     obj = DBTableMetaclass(**item)
 
     if type_ != "poll":
-        result = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
+        result = db.query(DBTableMetaclass).filter_by(id=obj.id).first()
     else:
         pass
 
@@ -241,13 +241,13 @@ async def _get_user(
     """
     TODO
     """
-    # Get user number from URL, eg, "https://xyz.proboards.com/user/42" has
-    # user number 42. We can exploit os.path.split() to grab everything right
+    # Get user id from URL, eg, "https://xyz.proboards.com/user/42" has
+    # user id 42. We can exploit os.path.split() to grab everything right
     # of the last backslash.
     user = {
         "type": "user",
         "url": url,
-        "number": int(os.path.split(url)[1])
+        "id": int(os.path.split(url)[1])
     }
 
     source = await get_source(url, sess)
@@ -416,6 +416,18 @@ async def get_users(
     return users
 
 
+async def scrape_board(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
+    moderators: List[int] = None
+):
+    """
+    Args:
+        moderators: Optional list of moderator ids for the board (this is
+            available on the main page).
+    """
+    pass
+
+
 async def get_content(
     url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue
 ):
@@ -426,7 +438,13 @@ async def get_content(
     categories = source.findAll("div", class_="container boards")
 
     for category in categories:
+        # The category id is found among the tag's previous siblings and looks
+        # like <a name="category-2"></a>. We want the number in the name attr.
+        category_id_tag = list(category.previous_siblings)[1]
+        category_id = int(category_id_tag["name"].split("-")[1])
+
         title_bar = category.find("div", class_="title_wrapper")
+        category_name = title_bar.text
 
     await content_queue.put(None)
 

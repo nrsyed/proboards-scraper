@@ -23,7 +23,7 @@ def serialize(obj):
 
 
 def query_users(
-    db: sqlalchemy.orm.Session, user_num: int = None
+    db: sqlalchemy.orm.Session, user_id: int = None
 ) -> Union[List[dict], dict]:
     """
     Return a list of all users if no ``user_num`` provided, or a specific
@@ -31,8 +31,8 @@ def query_users(
     """
     result = db.query(User)
 
-    if user_num is not None:
-        result = result.filter_by(number=user_num).first()
+    if user_id is not None:
+        result = result.filter_by(id=user_id).first()
     else:
         result = result.all()
     serialized = serialize(result)
