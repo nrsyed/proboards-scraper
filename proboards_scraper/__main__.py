@@ -143,6 +143,24 @@ def pbd_cli():
             user = result
             pprint(user)
     elif action == "board":
-        pass
+        result = proboards_scraper.database.query_boards(db, board_id=value)
+
+        if isinstance(result, list):
+            boards = []
+            for board in result:
+                boards.append((board["id"], board["name"]))
+            boards.sort(key=lambda tup: tup[0])
+            for board in boards:
+                board_id = board[0]
+                board_name = board[1]
+                print(f"{board_id}: {board_name}")
+        else:
+            board = result
+            if "moderators" in board:
+                mods = [user["name"] for user in board["moderators"]]
+                board["moderators"] = mods
+            pprint(board)
     else:
         raise ValueError("Invalid action")
+
+

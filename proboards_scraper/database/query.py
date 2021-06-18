@@ -3,7 +3,7 @@ from typing import List, Union
 import sqlalchemy
 import sqlalchemy.orm
 
-from .schema import Board, Category, Post, Thread, User
+from .schema import Board, Category, Moderator, Post, Thread, User
 
 
 def serialize(obj):
@@ -15,6 +15,12 @@ def serialize(obj):
         for k, v in vars(obj).items():
             if not k.startswith("_"):
                 dict_[k] = serialize(v)
+
+        # association_proxy _AssocationList items are not in
+        # Board.__dict__ and must be separately serialized.
+        if hasattr(obj, "moderators"):
+            dict_["moderators"] = serialize(list(obj.moderators))
+
         return dict_
     elif isinstance(obj, list):
         return [serialize(item) for item in obj]
@@ -35,7 +41,18 @@ def query_users(
         result = result.filter_by(id=user_id).first()
     else:
         result = result.all()
-    serialized = serialize(result)
+    return serialize(result)
 
-    return serialized
 
+def query_boards(
+    db: sqlalchemy.orm.Session, board_id: int = None
+) -> Union[List[dict], dict]:
+    """
+    """
+    result = db.query(Board)
+
+    if board_id is not None:
+        result = result.filter_by(id=board_id).first()
+    else:
+        result = result.all()
+    return serialize(result)
