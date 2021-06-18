@@ -1,4 +1,3 @@
-# TODO: close aiohttp client session
 # TODO: logging
 import argparse
 import asyncio
@@ -56,17 +55,17 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
     if result is None:
         db.add(obj)
         db.commit()
-        logger.debug(f"Adding {type_} {item['name']} to database")
+        logger.info(f"Added {type_} {item['name']} to database")
     else:
-        logger.debug(
-            f"{type_.title()} {item['name']} already exists in database"
+        logger.info(
+            f"{type_.title()} {item['name']} already exists in database; skipping"
         )
 
     return True
 
 
 async def process_queues(
-    db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
+    db: sqlalchemy.orm.Session, user_queue: Union[asyncio.Queue, None],
     content_queue: asyncio.Queue, sess: aiohttp.ClientSession
 ):
     """
@@ -82,14 +81,15 @@ async def process_queues(
         sess: This is provided so the session can be closed after all content
             has been processed from the queues.
     """
-    all_users_added = False
-    while not all_users_added:
-        user = await user_queue.get()
+    if user_queue is not None:
+        all_users_added = False
+        while not all_users_added:
+            user = await user_queue.get()
 
-        if user is None:
-            all_users_added = True
-        else:
-            success = add_to_database(db, user)
+            if user is None:
+                all_users_added = True
+            else:
+                success = add_to_database(db, user)
 
     await sess.close()
 
@@ -150,6 +150,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
     """
     TODO
     """
+    logger.debug("Creating aiohttp login session from cookies")
     sess = aiohttp.ClientSession()
 
     morsels = {}
@@ -171,6 +172,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
 
     sess.cookie_jar.update_cookies(morsels)
 
+    logger.debug("Added cookies to aiohttp session")
     return sess
 
 
@@ -180,6 +182,7 @@ async def get_source(
     """
     TODO
     """
+    logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
     resp = await sess.get(url)
     text = await resp.text()
@@ -362,6 +365,7 @@ async def _get_user(
             user["instant_messengers"] = messenger_str
 
     await user_queue.put(user)
+    logger.info(f"Got user profile info for user {user['name']}")
     return user
 
 
@@ -373,6 +377,8 @@ async def get_users(
     sess: Login session.
     user_queue:
     """
+    logger.info(f"Getting user profile URLs from {url}")
+
     members_page_url = f"{url}/members"
     member_hrefs = []
 
@@ -387,6 +393,7 @@ async def get_users(
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
+    logger.info(f"Found {len(member_urls)} user profile URLs")
 
     loop = asyncio.get_running_loop()
     tasks = []
@@ -401,54 +408,57 @@ async def get_users(
     return users
 
 
-async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
+async def get_content(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue
+):
     """
     Scrape all categories/boards from the main page.
     """
-    source = get_source(url)
+    source = await get_source(url, sess)
     categories = source.findAll("div", class_="container boards")
 
     for category in categories:
         pass
 
 
-def scrape_site(url: str, username: str, password: str, db_path: str):
+def scrape_site(
+    url: str, username: str, password: str, db_path: str,
+    skip_users: bool = False,
+):
     """
-    TODO
+    Args:
+        url:
+        username:
+        password:
+        db_path:
+        skip_users:
     """
-    # Open database connection and get database session.
-    db = proboards_scraper.database.get_session(db_path)
-
-    # Queues from which elements will be consumed to populate the database.
-    # Users will be added before other site content.
-    user_queue = asyncio.Queue()
-    content_queue = asyncio.Queue()
-
     # Get cookies for parts of the site requiring login authentication.
+    logger.info(f"Logging in to {url}")
     cookies = get_login_cookies(url, username, password)
 
     # Create a persistent aiohttp login session from the cookies.
     sess = get_login_session(cookies)
+    logger.info("Login successful")
 
-    # TODO: use asyncio *.join instead of run_until_complete?
-    # TODO: use asyncio.run instead of asyncio.run_until_complete?
-    get_users_task = get_users(url, sess, user_queue)
-    #get_content_task = get_content(url, sess, content_queue)
+    tasks = []
+
+    user_queue = None
+    if not skip_users:
+        user_queue = asyncio.Queue()
+        users_task = get_users(url, sess, user_queue)
+        tasks.append(users_task)
+
+    content_queue = asyncio.Queue()
+    content_task = get_content(url, sess, content_queue)
+    tasks.append(content_task)
+
+    db = proboards_scraper.database.get_session(db_path)
     database_task = process_queues(db, user_queue, content_queue, sess)
+    tasks.append(database_task)
 
-    task_group = asyncio.gather(get_users_task, database_task)
-    
-    # TODO: use async.run instead of loop.run_until_complete?
-    loop = asyncio.get_event_loop()
+    task_group = asyncio.gather(*tasks)
+    asyncio.get_event_loop().run_until_complete(task_group)
 
-    # TODO: but sharing the db engine in a thread where it wasn't created
-    # causes fatal error.
-    # Use a single-worker thread pool for performing database queries/calls.
-    # Limiting the pool to a single worker allows us to run otherwise blocking
-    # sqlite database calls in a separate thread (with `loop.run_in_executor`)
-    # while avoiding concurrent write attempts from multiple threads, which
-    # sqlite does not support.
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    loop.set_default_executor(pool)
-
-    loop.run_until_complete(task_group)
+    #pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    #loop.set_default_executor(pool)
