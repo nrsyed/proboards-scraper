@@ -4,6 +4,20 @@ from pprint import pprint
 
 import proboards_scraper
 
+
+def configure_logging():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
+        datefmt="%H:%M:%S"
+    )
+
+    # Disable "verbose" debug/info logging for imported modules.
+    for module in ["asyncio", "selenium", "urllib3"]:
+        module_logger = logging.getLogger(module)
+        module_logger.setLevel(logging.ERROR)
+
+
 def pbs_cli():
     """
     Entrypoint for ``pbs`` (proboards scraper) tool.
@@ -18,7 +32,7 @@ def pbs_cli():
     )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
+    configure_logging()
 
     args.url = args.url.rstrip("/")
     proboards_scraper.scrape_site(
