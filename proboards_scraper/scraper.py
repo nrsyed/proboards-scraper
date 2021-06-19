@@ -207,24 +207,6 @@ async def get_source(
     return bs4.BeautifulSoup(text, "html.parser")
 
 
-def scrape_board(board: bs4.element.Tag):
-    subboards = board.find("div", class_="container boards")
-    if subboards:
-        # TODO
-        pass
-
-
-def scrape_category(category: bs4.element.Tag):
-    title_bar = category.find("div", class_="title_wrapper")
-    title = title_bar.text
-    boards = category.find("tbody").findAll("tr")
-
-    for board in boards:
-        # TODO
-        #scrape_board(board)
-        pass
-
-
 def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
     next_href = None
