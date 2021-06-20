@@ -13,7 +13,8 @@ class User(Base):
     Attributes:
         id (int): User number obtained from the user's profile URL,
             eg, ``https://yoursite.proboards.com/user/21`` refers to the user
-            with user id 23.
+            with user id 23. A negative value indicates a "guest" or deleted
+            user and does not refer to an actual user id.
         age (int): Optional
         birthdate (str): Optional
         date_registered (str): Unix timestamp
@@ -215,5 +216,3 @@ class Post(Base):
 #        id (int):
 #    """
 #    __tablename__ = "poll"
-
-#class Moderator(Base):

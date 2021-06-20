@@ -27,16 +27,19 @@ from proboards_scraper.database import (
 logger = logging.getLogger(__name__)
 
 
-def add_to_database(db: sqlalchemy.orm.Session, item: dict):
+def add_to_database(db: sqlalchemy.orm.Session, item: dict) -> dict:
     """
     TODO
     """
     type_ = item["type"]
     del item["type"]
 
+    retval = {}
+
     item_type_to_db_table_metaclass = {
         "board": Board,
         "category": Category,
+        "guest": User,
         "moderator": Moderator,
         "poll": None, # TODO
         "post": Post,
@@ -54,6 +57,30 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
             "board_id": obj.board_id,
         }
         item_desc = f"(user {obj.user_id}, board {obj.board_id})"
+    elif type_ == "guest":
+        # Guest users (which includes deleted users) do not have an actual
+        # user id or profile page, so we simply assign them negative ids
+        # in the database.
+        guests_query = db.query(DBTableMetaclass).filter(User.id < 0)
+        this_guest = guests_query.filter_by(name=obj.name).first()
+
+        if this_guest:
+            # This guest user already exists in the database.
+            obj.id = this_guest.id
+        else:
+            # Otherwise, this particular guest user does not exist in the
+            # database. Iterate through all guests and assign a new negative
+            # user id by decrementing the smallest guest user id already in
+            # the database.
+            lowest_id = 0
+            for guest in guests_query.all():
+                lowest_id = min(guest.id, lowest_id)
+            new_guest_id = lowest_id - 1
+            obj.id = new_guest_id
+
+        filters = {"id": obj.id}
+        item_desc = f"{item['name']}"
+        retval = {"guest_id": obj.id}
     else:
         filters = {"id": obj.id}
         item_desc = f"{item['name']}"
@@ -69,7 +96,7 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict):
             f"{type_} {item_desc} already exists in database; skipping"
         )
 
-    return True
+    return retval
 
 
 async def process_queues(
@@ -408,6 +435,18 @@ async def get_users(
     return users
 
 
+async def scrape_thread(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
+    board_id: int = None, user_id: int = None, locked: bool = False,
+    sticky: bool = False, announcement: bool = False
+):
+    """
+    """
+    # TODO: get thread title, thread id, add thread to queue before
+    # scraping all posts.
+    pass
+
+
 async def scrape_board(
     url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
     category_id: int = None, moderators: List[int] = None,
@@ -483,10 +522,69 @@ async def scrape_board(
                 parent_id=board_id
             )
 
-    # Iterate over all thread pages and add all threads to the queue.
+    # Iterate over all board pages and add threads on each page to queue.
     thread_container = source.find("div", class_="container threads")
+
     if thread_container:
-        pass
+        pages_remaining = True
+        while pages_remaining:
+            thread_tbody = thread_container.find("tbody")
+            threads = thread_tbody.findAll("tr", class_="thread")
+
+            for thread_ in threads:
+                announcement = "announcement" in thread_["class"]
+                sticky = "sticky" in thread_["class"]
+                locked = "locked" in thread_["class"]
+
+                created_by_tag = thread_.find("td", class_="created-by")
+
+                if guest_ := created_by_tag.find("span", class_="user-guest"):
+                    # This case occurs if the user is a guest or deleted user.
+                    # We assign the guest a user id of -1, add them to the
+                    # content queue (not user queue, which is intended for
+                    # registered users), and let :func:`add_to_database`
+                    # determine if this guest is already in the database (and
+                    # assign a new negative id if not).
+                    guest_user_name = guest_.text
+                    guest = {
+                        "type": "guest",
+                        "id": -1,
+                        "name": guest_user_name,
+                    }
+
+                    # Get new guest user id.
+                    retval = await content_queue.put(guest)
+                    create_user_id = retval["guest_id"]
+                else:
+                    # The href attribute is of the form "/user/12".
+                    #created_by_anchor = created_by_tag.find("a")
+                    created_by_href = created_by_tag.find("a")["href"]
+                    create_user_id = int(created_by_href.split("/")[-1])
+
+                clickable = thread_.find("td", class_="main clickable")
+                anchor = clickable.find("span", class_="link target").find("a")
+                thread_href = anchor["href"]
+                thread_url = site_url + thread_href
+                await scrape_thread(
+                    thread_url, sess, content_queue, board_id=board_id,
+                    user_id=create_user_id, locked=locked, sticky=sticky,
+                    announcement=announcement
+                )
+
+            # control-bar contains pagination/navigation buttons.
+            control_bar = thread_container.find("ul", class_="ui-pagination")
+            next_btn = control_bar.find("li", class_="next")
+
+            if "state-disabled" in next_btn["class"]:
+                pages_remaining = False
+            else:
+                next_page_href = next_btn.find("a")["href"]
+                next_page_url = site_url + next_page_href
+                logger.info(f"Getting source for {next_page_url}")
+                source = await get_source(next_page_url, sess)
+                thread_container = source.find(
+                    "div", class_="container threads"
+                )
 
 
 async def get_content(

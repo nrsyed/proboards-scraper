@@ -104,14 +104,14 @@ def pbd_cli():
         help="Path to database file"
     )
 
-    # One actions must be chosen. The value of `-1` is used to indicate that
+    # One actions must be chosen. The value of `0` is used to indicate that
     # that a given action was NOT provided.
     actions = parser.add_mutually_exclusive_group(required=True)
     actions.add_argument(
-        "--user", "-u", nargs="?", type=int, default=-1, const=None
+        "--user", "-u", nargs="?", type=int, default=0, const=None
     )
     actions.add_argument(
-        "--board", "-b", nargs="?", type=int, default=-1, const=None
+        "--board", "-b", nargs="?", type=int, default=0, const=None
     )
     args = vars(parser.parse_args())
 
@@ -122,7 +122,7 @@ def pbd_cli():
 
     # Determine which action was selected (and its value, if any provided).
     for _action in ("user", "board"):
-        if args[_action] != -1:
+        if args[_action] != 0:
             action = _action
             value = args[_action]
 
@@ -165,5 +165,3 @@ def pbd_cli():
             pprint(board)
     else:
         raise ValueError("Invalid action")
-
-
