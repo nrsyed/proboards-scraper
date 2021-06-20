@@ -1,5 +1,4 @@
-# TODO: close aiohttp client session
-# TODO: logging
+# TODO: announcement thread (avoid visiting in every board)
 import argparse
 import asyncio
 import concurrent.futures
@@ -7,6 +6,7 @@ import http
 import logging
 import os
 import pathlib
+import re
 import sys
 import time
 from typing import Any, List, Tuple, Union
@@ -18,61 +18,90 @@ import selenium.webdriver
 import sqlalchemy
 import sqlalchemy.orm
 
-#from .schema import Base, Board, Category, Poll, Post, Thread, User
-from .schema import Base, Board, Category, Post, Thread, User
+import proboards_scraper.database
+from proboards_scraper.database import (
+    Base, Board, Category, Moderator, Post, Thread, User,
+)
 
 
 logger = logging.getLogger(__name__)
 
 
-def _add_to_database(db: sqlalchemy.orm.Session, item: dict):
+def add_to_database(db: sqlalchemy.orm.Session, item: dict) -> dict:
     """
-    Helper function for :func:`add_to_database`. Because SQLite objects
-    created in a thread can only be used in that same thread, this function
-    (callable in a separate thread by `loop.run_in_executor` from
-    :func:`add_to_database`) handles everything related to creating, querying,
-    and/or adding a given database item.
+    TODO
     """
     type_ = item["type"]
     del item["type"]
 
+    retval = {}
+
     item_type_to_db_table_metaclass = {
-        "user": User,
-        "category": Category,
         "board": Board,
-        "thread": Thread,
+        "category": Category,
+        "guest": User,
+        "moderator": Moderator,
+        "poll": None, # TODO
         "post": Post,
-        "poll": None # TODO
+        "user": User,
+        "thread": Thread,
     }
 
     # Instantiate a database object from the database table metaclass.
     DBTableMetaclass = item_type_to_db_table_metaclass[type_]
     obj = DBTableMetaclass(**item)
 
-    if type_ != "poll":
-        query = db.query(DBTableMetaclass).filter_by(number=obj.number).first()
-    else:
-        pass
+    if type_ == "moderator":
+        filters = {
+            "user_id": obj.user_id,
+            "board_id": obj.board_id,
+        }
+        item_desc = f"(user {obj.user_id}, board {obj.board_id})"
+    elif type_ == "guest":
+        # Guest users (which includes deleted users) do not have an actual
+        # user id or profile page, so we simply assign them negative ids
+        # in the database.
+        guests_query = db.query(DBTableMetaclass).filter(User.id < 0)
+        this_guest = guests_query.filter_by(name=obj.name).first()
 
-    # TODO: update an existing object or just skip?
-    if query is None:
+        if this_guest:
+            # This guest user already exists in the database.
+            obj.id = this_guest.id
+        else:
+            # Otherwise, this particular guest user does not exist in the
+            # database. Iterate through all guests and assign a new negative
+            # user id by decrementing the smallest guest user id already in
+            # the database.
+            lowest_id = 0
+            for guest in guests_query.all():
+                lowest_id = min(guest.id, lowest_id)
+            new_guest_id = lowest_id - 1
+            obj.id = new_guest_id
+
+        filters = {"id": obj.id}
+        item_desc = f"{item['name']}"
+        retval = {"guest_id": obj.id}
+    else:
+        filters = {"id": obj.id}
+        item_desc = f"{item['name']}"
+
+    result = db.query(DBTableMetaclass).filter_by(**filters).first()
+    if result is None:
         db.add(obj)
         db.commit()
+        logger.info(f"{type_} {item_desc} added to database")
+    else:
+        # TODO: update an existing object or just skip?
+        logger.info(
+            f"{type_} {item_desc} already exists in database; skipping"
+        )
 
-
-async def add_to_database(db: sqlalchemy.orm.Session, item: dict):
-    """
-    TODO
-    """
-    # TODO: use a custom threadpool with a single worker to avoid SQLite
-    # multiple simultaneous writes?
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _add_to_database, db, item)
+    return retval
 
 
 async def process_queues(
-    db: sqlalchemy.orm.Session, user_queue: asyncio.Queue,
-    content_queue: asyncio.Queue
+    db: sqlalchemy.orm.Session, user_queue: Union[asyncio.Queue, None],
+    content_queue: asyncio.Queue, sess: aiohttp.ClientSession
 ):
     """
     Add all users followed by all content (boards, threads, posts) to the
@@ -82,15 +111,32 @@ async def process_queues(
     thread is added to the queue before the posts it contains, etc.). Thus,
     the parent of each piece of content (if any) will have been added to the
     database earlier in the queue.
-    """
-    all_users_added = False
-    while not all_users_added:
-        user = await user_queue.get()
 
-        if user is None:
-            all_users_added = True
+    Args:
+        sess: This is provided so the session can be closed after all content
+            has been processed from the queues.
+    """
+    if user_queue is not None:
+        all_users_added = False
+        while not all_users_added:
+            user = await user_queue.get()
+
+            if user is None:
+                all_users_added = True
+            else:
+                # TODO: success/failure
+                success = add_to_database(db, user)
+
+    all_content_added = False
+    while not all_content_added:
+        content = await content_queue.get()
+
+        if content is None:
+            all_content_added = True
         else:
-            success = await add_to_database(db, user)
+            success = add_to_database(db, content)
+
+    await sess.close()
 
 
 def get_login_cookies(
@@ -149,6 +195,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
     """
     TODO
     """
+    logger.debug("Creating aiohttp login session from cookies")
     sess = aiohttp.ClientSession()
 
     morsels = {}
@@ -170,6 +217,7 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
 
     sess.cookie_jar.update_cookies(morsels)
 
+    logger.debug("Added cookies to aiohttp session")
     return sess
 
 
@@ -179,28 +227,11 @@ async def get_source(
     """
     TODO
     """
+    logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
     resp = await sess.get(url)
     text = await resp.text()
     return bs4.BeautifulSoup(text, "html.parser")
-
-
-def scrape_board(board: bs4.element.Tag):
-    subboards = board.find("div", class_="container boards")
-    if subboards:
-        # TODO
-        pass
-
-
-def scrape_category(category: bs4.element.Tag):
-    title_bar = category.find("div", class_="title_wrapper")
-    title = title_bar.text
-    boards = category.find("tbody").findAll("tr")
-
-    for board in boards:
-        # TODO
-        #scrape_board(board)
-        pass
 
 
 def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
@@ -229,13 +260,13 @@ async def _get_user(
     """
     TODO
     """
-    # Get user number from URL, eg, "https://xyz.proboards.com/user/42" has
-    # user number 42. We can exploit os.path.split() to grab everything right
+    # Get user id from URL, eg, "https://xyz.proboards.com/user/42" has
+    # user id 42. We can exploit os.path.split() to grab everything right
     # of the last backslash.
     user = {
         "type": "user",
         "url": url,
-        "number": int(os.path.split(url)[1])
+        "id": int(os.path.split(url)[1])
     }
 
     source = await get_source(url, sess)
@@ -361,6 +392,7 @@ async def _get_user(
             user["instant_messengers"] = messenger_str
 
     await user_queue.put(user)
+    logger.debug(f"Got user profile info for user {user['name']}")
     return user
 
 
@@ -372,6 +404,8 @@ async def get_users(
     sess: Login session.
     user_queue:
     """
+    logger.info(f"Getting user profile URLs from {url}")
+
     members_page_url = f"{url}/members"
     member_hrefs = []
 
@@ -386,6 +420,7 @@ async def get_users(
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
+    logger.info(f"Found {len(member_urls)} user profile URLs")
 
     loop = asyncio.get_running_loop()
     tasks = []
@@ -400,55 +435,263 @@ async def get_users(
     return users
 
 
-async def get_content(url: str, cookies: dict, content_queue: asyncio.Queue):
+async def scrape_thread(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
+    board_id: int = None, user_id: int = None, locked: bool = False,
+    sticky: bool = False, announcement: bool = False
+):
+    """
+    """
+    # TODO: get thread title, thread id, add thread to queue before
+    # scraping all posts.
+    pass
+
+
+async def scrape_board(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
+    category_id: int = None, moderators: List[int] = None,
+    parent_id: int = None
+):
+    """
+    Args:
+        moderators: Optional list of moderator ids for the board (this is
+            available on the main page).
+    """
+    # Board URLs take the form
+    # https://{subdomain}.proboards.com/board/{id}/{name}
+    expr = r"(.*)/board/(\d+)/.*"
+    match = re.match(expr, url)
+
+    # We get the site_url to construct sub-board URLs (if any) later.
+    site_url = match.groups()[0]
+    board_id = int(match.groups()[1])
+
+    source = await get_source(url, sess)
+
+    # Get board name and description from Information/Statistics container.
+    stats_container = source.find("div", class_="container stats")
+    
+    description = None
+    password_protected = None
+    if (
+        (not stats_container)
+        and ("This board is password protected" in str(source))
+    ):
+        container = source.find("div", class_="container")
+        title_heading = container.find("div", class_="title-bar").find("h2")
+        board_name = title_heading.text
+        password_protected = True
+    else:
+        board_name = stats_container.find("div", class_="board-name").text
+        description = stats_container.find("div", class_="board-description").text
+
+    board = {
+        "type": "board",
+        "category_id": category_id,
+        "description": description,
+        "id": board_id,
+        "name": board_name,
+        "parent_id": parent_id,
+        "password_protected": password_protected,
+        "url": url,
+    }
+    await content_queue.put(board)
+
+    if moderators:
+        for user_id in moderators:
+            moderator = {
+                "type": "moderator",
+                "user_id": user_id,
+                "board_id": board_id,
+            }
+            await content_queue.put(moderator)
+
+    # Add any sub-boards to the queue.
+    subboard_container = source.find("div", class_="container boards")
+    if subboard_container:
+        subboards = subboard_container.find("tbody").findAll("tr")
+
+        for subboard in subboards:
+            clickable = subboard.find("td", class_="main clickable")
+            link = clickable.find("span", class_="link").find("a")
+            href = link["href"]
+            subboard_url = site_url + href
+
+            await scrape_board(
+                subboard_url, sess, content_queue, category_id=category_id,
+                parent_id=board_id
+            )
+
+    # Iterate over all board pages and add threads on each page to queue.
+    thread_container = source.find("div", class_="container threads")
+
+    if thread_container:
+        pages_remaining = True
+        while pages_remaining:
+            thread_tbody = thread_container.find("tbody")
+            threads = thread_tbody.findAll("tr", class_="thread")
+
+            for thread_ in threads:
+                announcement = "announcement" in thread_["class"]
+                sticky = "sticky" in thread_["class"]
+                locked = "locked" in thread_["class"]
+
+                created_by_tag = thread_.find("td", class_="created-by")
+
+                if guest_ := created_by_tag.find("span", class_="user-guest"):
+                    # This case occurs if the user is a guest or deleted user.
+                    # We assign the guest a user id of -1, add them to the
+                    # content queue (not user queue, which is intended for
+                    # registered users), and let :func:`add_to_database`
+                    # determine if this guest is already in the database (and
+                    # assign a new negative id if not).
+                    guest_user_name = guest_.text
+                    guest = {
+                        "type": "guest",
+                        "id": -1,
+                        "name": guest_user_name,
+                    }
+
+                    # Get new guest user id.
+                    retval = await content_queue.put(guest)
+                    create_user_id = retval["guest_id"]
+                else:
+                    # The href attribute is of the form "/user/12".
+                    #created_by_anchor = created_by_tag.find("a")
+                    created_by_href = created_by_tag.find("a")["href"]
+                    create_user_id = int(created_by_href.split("/")[-1])
+
+                clickable = thread_.find("td", class_="main clickable")
+                anchor = clickable.find("span", class_="link target").find("a")
+                thread_href = anchor["href"]
+                thread_url = site_url + thread_href
+                await scrape_thread(
+                    thread_url, sess, content_queue, board_id=board_id,
+                    user_id=create_user_id, locked=locked, sticky=sticky,
+                    announcement=announcement
+                )
+
+            # control-bar contains pagination/navigation buttons.
+            control_bar = thread_container.find("ul", class_="ui-pagination")
+            next_btn = control_bar.find("li", class_="next")
+
+            if "state-disabled" in next_btn["class"]:
+                pages_remaining = False
+            else:
+                next_page_href = next_btn.find("a")["href"]
+                next_page_url = site_url + next_page_href
+                logger.info(f"Getting source for {next_page_url}")
+                source = await get_source(next_page_url, sess)
+                thread_container = source.find(
+                    "div", class_="container threads"
+                )
+
+
+async def get_content(
+    url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue
+):
     """
     Scrape all categories/boards from the main page.
+
+    Args:
+        url: Homepage URL.
     """
-    source = get_source(url)
+    source = await get_source(url, sess)
     categories = source.findAll("div", class_="container boards")
 
-    for category in categories:
-        pass
+    for category_ in categories:
+        # The category id is found among the tag's previous siblings and looks
+        # like <a name="category-2"></a>. We want the number in the name attr.
+        category_id_tag = list(category_.previous_siblings)[1]
+        category_id = int(category_id_tag["name"].split("-")[1])
+
+        title_bar = category_.find("div", class_="title_wrapper")
+        category_name = title_bar.text
+
+        # Add category to database queue.
+        category = {
+            "type": "category",
+            "id": category_id,
+            "name": category_name,
+        }
+        await content_queue.put(category)
+
+        boards = category_.findAll(
+            "tr",
+            {"class": ["o-board", "board", "item"]}
+        )
+
+        for board_ in boards:
+            clickable = board_.find("td", class_="main clickable")
+            link = clickable.find("span", class_="link").find("a")
+            href = link["href"]
+            board_url = url + href
+
+            # Get list of moderators, if any.
+            mods_tag = clickable.find("p", class_="moderators")
+
+            moderator_ids = None
+            if mods_tag is not None:
+                moderator_ids = [
+                    int(a_tag["data-id"]) for a_tag in mods_tag.findAll("a")
+                ]
+
+            await scrape_board(
+                board_url, sess, content_queue, category_id=category_id,
+                moderators=moderator_ids
+            )
+
+    await content_queue.put(None)
 
 
-def scrape_site(url: str, username: str, password: str, db_path: str):
+def scrape_site(
+    url: str, db_path: str, username: str = None, password: str = None,
+    skip_users: bool = False,
+):
     """
-    TODO
+    Args:
+        url:
+        username:
+        password:
+        db_path:
+        skip_users:
     """
-    # Open database connection and initialize database.
-    engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
-    Session = sqlalchemy.orm.sessionmaker(engine)
-    db = Session()
-    Base.metadata.create_all(engine)
-
-    # Queues from which elements will be consumed to populate the database.
-    # Users will be added before other site content.
-    user_queue = asyncio.Queue()
-    content_queue = asyncio.Queue()
+    url = url.rstrip("/")
 
     # Get cookies for parts of the site requiring login authentication.
-    cookies = get_login_cookies(url, username, password)
+    if username and password:
+        logger.info(f"Logging in to {url}")
+        cookies = get_login_cookies(url, username, password)
 
-    # Create a persistent aiohttp login session from the cookies.
-    sess = get_login_session(cookies)
+        # Create a persistent aiohttp login session from the cookies.
+        sess = get_login_session(cookies)
+        logger.info("Login successful")
+    else:
+        logger.info(
+            "Username and/or password not provided; proceeding without login"
+        )
+        sess = aiohttp.ClientSession()
 
-    # TODO: use asyncio *.join instead of run_until_complete?
-    # TODO: use asyncio.run instead of asyncio.run_until_complete?
-    get_users_task = get_users(url, sess, user_queue)
-    #get_content_task = get_content(url, sess, content_queue)
-    database_task = process_queues(db, user_queue, content_queue)
+    tasks = []
 
-    task_group = asyncio.gather(get_users_task, database_task)
-    
-    # TODO: use async.run instead of loop.run_until_complete?
-    loop = asyncio.get_event_loop()
+    if not skip_users:
+        user_queue = asyncio.Queue()
+        users_task = get_users(url, sess, user_queue)
+        tasks.append(users_task)
+    else:
+        user_queue = None
+        logger.info("Skipping user profiles")
 
-    # Use a single-worker thread pool for performing database queries/calls.
-    # Limiting the pool to a single worker allows us to run otherwise blocking
-    # sqlite database calls in a separate thread (with `loop.run_in_executor`)
-    # while avoiding concurrent write attempts from multiple threads, which
-    # sqlite does not support.
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    loop.set_default_executor(pool)
+    content_queue = asyncio.Queue()
+    content_task = get_content(url, sess, content_queue)
+    tasks.append(content_task)
 
-    loop.run_until_complete(task_group)
+    db = proboards_scraper.database.get_session(db_path)
+    database_task = process_queues(db, user_queue, content_queue, sess)
+    tasks.append(database_task)
+
+    task_group = asyncio.gather(*tasks)
+    asyncio.get_event_loop().run_until_complete(task_group)
+
+    #pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    #loop.set_default_executor(pool)

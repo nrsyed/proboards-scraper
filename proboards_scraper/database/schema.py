@@ -1,7 +1,7 @@
-# TODO: should numbers be the primary keys?
 from sqlalchemy import (
     Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
 )
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -11,10 +11,10 @@ Base = declarative_base()
 class User(Base):
     """
     Attributes:
-        id (int): Primary key.
-        number (int): User number obtained from the user's profile URL,
+        id (int): User number obtained from the user's profile URL,
             eg, ``https://yoursite.proboards.com/user/21`` refers to the user
-            with user number 23. This should be unique for each user.
+            with user id 23. A negative value indicates a "guest" or deleted
+            user and does not refer to an actual user id.
         age (int): Optional
         birthdate (str): Optional
         date_registered (str): Unix timestamp
@@ -45,8 +45,7 @@ class User(Base):
     """
     __tablename__ = "user"
 
-    id = Column("id", Integer, primary_key=True)
-    number = Column("number", Integer, nullable=False, unique=True)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
 
     age = Column("age", Integer)
     birthdate = Column("birthdate", String)
@@ -75,60 +74,84 @@ class User(Base):
 class Category(Base):
     """
     Attributes:
-        id (int): Primary key.
+        id (int): Category id number obtained from the main page source.
         name (str): Category name.
-        number (int): Category number obtained from the main page source.
 
         boards: This category's boards (including sub-boards).
     """
     __tablename__ = "category"
 
-    id = Column("id", Integer, primary_key=True)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     name = Column("name", String, nullable=False)
-    number = Column("number", Integer, nullable=False, unique=True)
 
     boards = relationship("Board")
-
 
 
 class Board(Base):
     """
     Attributes:
-        id (int): Primary key.
-        name (str): Board name (required).
-        number (int): Board number obtained from the board URL, eg,
+        id (int): Board number obtained from the board URL, eg,
             ``https://yoursite.proboards.com/board/42/general`` refers to the
-            "General" board having board number 42. This should be unique.
+            "General" board having board id 42.
+        category_id (int): Category to which this board belongs.
+        description (str): Board description.
+        name (str): Board name (required).
+        parent_id (int): Parent board primary key (if a sub-board).
+        password_protected (bool):
         url (str): 
 
-        category_id (int): Category to which this board belongs.
-        parent_id (int): Parent board primary key (if a sub-board).
 
         sub_boards: This board's sub-boards.
         threads: This board's threads.
     """
     __tablename__ = "board"
 
-    id = Column("id", Integer, primary_key=True)
-    name = Column("name", String, nullable=False)
-    number = Column("number", Integer, nullable=False, unique=True)
-    url = Column("url", String)
-
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     category_id = Column("category_id", ForeignKey("category.id"))
+    description = Column("description", String)
+    name = Column("name", String, nullable=False)
     parent_id = Column("parent_id", ForeignKey("board.id"))
+    password_protected = Column("password_protected", Boolean)
+    url = Column("url", String)
 
     sub_boards = relationship("Board")
     threads = relationship("Thread")
+
+    # TODO: moderators
+    _moderators = relationship("Moderator")
+    moderators = association_proxy("_moderators", "_users")
+
+
+class Moderator(Base):
+    """
+    This table links a user to a board they moderate. A given moderation
+    relationship (i.e., board + user combination) must be unique.
+    Attributes:
+        board_id (int): Board from ``board`` table.
+        user_id (int): User from ``user`` table.
+    """
+    __tablename__ = "moderator"
+    __table_args__ = (UniqueConstraint("board_id", "user_id"),)
+
+    board_id = Column(
+        "board_id", Integer, ForeignKey("board.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _users = relationship("User")
 
 
 class Thread(Base):
     """
     Attributes:
-        id (int): Primary key.
-        locked (bool):
-        number: Thread number from thread URL.
+        id: Thread id from thread URL.
         title (str): Thread title.
         url (str): Original URL.
+        locked (bool):
+        sticky (bool):
+        announcement (bool):
 
         board_id (int): Board (in ``board`` table) where the thread was made.
         user_id (int): User (in ``user`` table) who started the thread.
@@ -137,15 +160,21 @@ class Thread(Base):
     """
     __tablename__ = "thread"
 
-    id = Column("id", Integer, primary_key=True)
-    # TODO: default for locked, check bool type
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+
+    # TODO: default for locked, sticky, announcement, check bool type
+    announcement = Column("announcement", Boolean)
     locked = Column("locked", Boolean)
-    number = Column("number", Integer, nullable=False, unique=True)
+    sticky = Column("sticky", Boolean)
     title = Column("title", String)
     url = Column("url", String)
 
-    board_id = Column("board_id", ForeignKey("board.id"), nullable=False)
-    user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
+    board_id = Column(
+        "board_id", ForeignKey("board.id"), nullable=False
+    )
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
+    )
 
     posts = relationship("Post")
 
@@ -153,7 +182,7 @@ class Thread(Base):
 class Post(Base):
     """
     Attributes:
-        id (int): Primary key.
+        id (int):
         date (str): When the post was made (Unix timestamp).
         last_edited (str): When the post was last edited (Unix timestamp); if
             never, this field should be null.
@@ -166,16 +195,19 @@ class Post(Base):
     """
     __tablename__ = "post"
 
-    id = Column("id", Integer, primary_key=True)
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
     date = Column("date", String)
     last_edited = Column("last_edited", String)
-    number = Column("number", Integer, nullable=False, unique=True)
     message = Column("message", String)
     url = Column("url", String)
 
     edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
-    thread_id = Column("thread_id", ForeignKey("thread.id"), nullable=False)
-    user_id = Column("user_id", ForeignKey("user.id"), nullable=False)
+    thread_id = Column(
+        "thread_id", ForeignKey("thread.id"), nullable=False
+    )
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
+    )
 
 
 #class Poll(Base):
