@@ -147,13 +147,12 @@ class Thread(Base):
     """
     Attributes:
         id: Thread id from thread URL.
+        announcement (bool):
+        board_id (int): Board (in ``board`` table) where the thread was made.
+        locked (bool):
         title (str): Thread title.
         url (str): Original URL.
-        locked (bool):
         sticky (bool):
-        announcement (bool):
-
-        board_id (int): Board (in ``board`` table) where the thread was made.
         user_id (int): User (in ``user`` table) who started the thread.
 
         posts: This thread's posts.
@@ -164,17 +163,17 @@ class Thread(Base):
 
     # TODO: default for locked, sticky, announcement, check bool type
     announcement = Column("announcement", Boolean)
+    board_id = Column(
+        "board_id", ForeignKey("board.id"), nullable=False
+    )
     locked = Column("locked", Boolean)
     sticky = Column("sticky", Boolean)
     title = Column("title", String)
     url = Column("url", String)
-
-    board_id = Column(
-        "board_id", ForeignKey("board.id"), nullable=False
-    )
     user_id = Column(
         "user_id", ForeignKey("user.id"), nullable=False
     )
+    views = Column("views", Integer)
 
     posts = relationship("Post")
 
@@ -184,27 +183,25 @@ class Post(Base):
     Attributes:
         id (int):
         date (str): When the post was made (Unix timestamp).
+        edit_user_id (int): User (in ``user`` table) who made the last edit.
         last_edited (str): When the post was last edited (Unix timestamp); if
             never, this field should be null.
         message (str): Post content/message.
-        url (str): Original post URL.
-
-        edit_user_id (int): User (in ``user`` table) who made the last edit.
         thread_id (int): Thread (in ``thread``) where the post was made.
+        url (str): Original post URL.
         user_id (int): User (in ``user`` table) who made the post.
     """
     __tablename__ = "post"
 
     id = Column("id", Integer, primary_key=True, autoincrement=False)
     date = Column("date", String)
+    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
     last_edited = Column("last_edited", String)
     message = Column("message", String)
-    url = Column("url", String)
-
-    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
     thread_id = Column(
         "thread_id", ForeignKey("thread.id"), nullable=False
     )
+    url = Column("url", String)
     user_id = Column(
         "user_id", ForeignKey("user.id"), nullable=False
     )

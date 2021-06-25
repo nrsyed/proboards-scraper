@@ -81,9 +81,16 @@ def add_to_database(db: sqlalchemy.orm.Session, item: dict) -> dict:
         filters = {"id": obj.id}
         item_desc = f"{item['name']}"
         retval = {"guest_id": obj.id}
+        breakpoint()
     else:
         filters = {"id": obj.id}
-        item_desc = f"{item['name']}"
+
+        if type_ == "post":
+            item_desc = f"{item['id']}"
+        elif type_ == "thread":
+            item_desc = f"{item['title']}"
+        else:
+            item_desc = f"{item['name']}"
 
     result = db.query(DBTableMetaclass).filter_by(**filters).first()
     if result is None:
@@ -137,7 +144,7 @@ async def process_queues(
             success = add_to_database(db, content)
 
     await sess.close()
-
+        
 
 def get_login_cookies(
     home_url: str, username: str, password: str, page_load_wait: int = 1
@@ -437,14 +444,113 @@ async def get_users(
 
 async def scrape_thread(
     url: str, sess: aiohttp.ClientSession, content_queue: asyncio.Queue,
-    board_id: int = None, user_id: int = None, locked: bool = False,
-    sticky: bool = False, announcement: bool = False
+    board_id: int = None, user_id: int = None, views: int = None,
+    announcement: bool = False, locked: bool = False, sticky: bool = False
 ):
     """
+    TODO
     """
-    # TODO: get thread title, thread id, add thread to queue before
-    # scraping all posts.
-    pass
+    # Get thread id from URL.
+    expr = r"(.*)/thread/(\d+)/.*"
+    match = re.match(expr, url)
+    site_url = match.groups()[0]
+    thread_id = int(match.groups()[1])
+
+    source = await get_source(url, sess)
+
+    post_container = source.find("div", class_="container posts")
+    title_bar = post_container.find("div", class_="title-bar")
+    thread_title = title_bar.find("h1").text
+
+    thread = {
+        "type": "thread",
+        "announcement": announcement,
+        "board_id": board_id,
+        "id": thread_id,
+        "locked": locked,
+        "sticky": sticky,
+        "title": thread_title,
+        "url": url,
+        "user_id": user_id,
+        "views": views,
+    }
+    await content_queue.put(thread)
+
+    pages_remaining = True
+    while pages_remaining:
+        posts = post_container.findAll("tr", class_="post")
+        
+        for post_ in posts:
+            # Each post <tr> tag has an id attribute of the form:
+            # <tr id="post-1234">
+            # where 1234 would be the post id.
+            post_id = int(post_["id"].split("-")[1])
+
+            # "left panel" contains info about the user who made the post.
+            left_panel = post_.find("td", class_="left-panel")
+
+            if guest_ := left_panel.find("span", class_="user-guest"):
+                guest_user_name = guest_.text
+                guest = {
+                    "type": "guest",
+                    "id": -1,
+                    "name": guest_user_name,
+                }
+
+                # Get new guest user id.
+                retval = await content_queue.put(guest)
+                breakpoint()
+                create_user_id = retval["guest_id"]
+                breakpoint()
+            else:
+                # <a> tag href attribute is of the form "/user/5".
+                user_link = left_panel.find("a", class_="user-link")
+                user_id = int(user_link["href"].split("/")[-1])
+
+            post_content = post_.find("td", class_="content")
+            post_info = post_content.find("div", class_="info")
+
+            date_abbr = post_info.find("span", class_="date").find("abbr")
+            date = date_abbr["data-timestamp"]
+
+            article = post_content.find("article")
+            message_ = article.find("div", class_="message")
+            message = "".join(str(child) for child in message_.children)
+
+            last_edited = None
+            edit_user_id = None
+
+            edited_by = post_.find("div", class_="edited_by")
+            if edited_by is not None:
+                last_edited = edited_by.find("abbr")["data-timestamp"]
+                edit_user_href = edited_by.find("a")["href"]
+                edit_user_id = int(edit_user_href.split("/")[-1])
+
+            post = {
+                "type": "post",
+                "id": post_id,
+                "date": date,
+                "edit_user_id": edit_user_id,
+                "last_edited": last_edited,
+                "message": message,
+                "thread_id": thread_id,
+                "url": f"{site_url}/post/{post_id}",
+                "user_id": user_id,
+            }
+            await content_queue.put(post)
+
+            # Continue to next page, if any.
+            control_bar = post_container.find("div", class_="control-bar")
+            next_btn = control_bar.find("li", class_="next")
+
+            if "state-disabled" in next_btn["class"]:
+                pages_remaining = False
+            else:
+                next_href = next_btn.find("a")["href"]
+                next_url = f"{site_url}{next_href}"
+                source = await get_source(next_url, sess)
+                post_container = source.find("div", class_="container posts")
+
 
 
 async def scrape_board(
@@ -536,6 +642,8 @@ async def scrape_board(
                 sticky = "sticky" in thread_["class"]
                 locked = "locked" in thread_["class"]
 
+                views = int(thread_.find("td", class_="views").text)
+
                 created_by_tag = thread_.find("td", class_="created-by")
 
                 if guest_ := created_by_tag.find("span", class_="user-guest"):
@@ -557,7 +665,6 @@ async def scrape_board(
                     create_user_id = retval["guest_id"]
                 else:
                     # The href attribute is of the form "/user/12".
-                    #created_by_anchor = created_by_tag.find("a")
                     created_by_href = created_by_tag.find("a")["href"]
                     create_user_id = int(created_by_href.split("/")[-1])
 
@@ -567,8 +674,8 @@ async def scrape_board(
                 thread_url = site_url + thread_href
                 await scrape_thread(
                     thread_url, sess, content_queue, board_id=board_id,
-                    user_id=create_user_id, locked=locked, sticky=sticky,
-                    announcement=announcement
+                    user_id=create_user_id, views=views,
+                    announcement=announcement, locked=locked, sticky=sticky,
                 )
 
             # control-bar contains pagination/navigation buttons.
@@ -692,6 +799,3 @@ def scrape_site(
 
     task_group = asyncio.gather(*tasks)
     asyncio.get_event_loop().run_until_complete(task_group)
-
-    #pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    #loop.set_default_executor(pool)
