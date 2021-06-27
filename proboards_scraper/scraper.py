@@ -181,7 +181,8 @@ async def _get_user(
             elif child.strip() == "Member is Online":
                 # This will be the case for the aiohttp session's logged-in
                 # user (and for any other user that happens to be logged in).
-                unix_ts = str(int(time.time()))
+                # Multiply time.time() value by 1000 for milliseconds.
+                unix_ts = str(int(time.time()) * 1000)
                 user["last_online"] = unix_ts
 
     # Get rest of user info from the table in the user status form.
