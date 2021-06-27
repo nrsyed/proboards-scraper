@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="proboards-scraper",
-    version="0.3",
+    version="0.6",
     author="Najam R. Syed",
     author_email="najam.r.syed@gmail.com",
     license="MIT",

@@ -115,7 +115,7 @@ def pbd_cli():
     )
     args = vars(parser.parse_args())
 
-    db = proboards_scraper.database.get_session(args["database"])
+    db = proboards_scraper.database.Database(args["database"])
 
     action = None
     value = None
@@ -127,7 +127,7 @@ def pbd_cli():
             value = args[_action]
 
     if action == "user":
-        result = proboards_scraper.database.query_users(db, user_id=value)
+        result = db.query_users(user_id=value)
 
         if isinstance(result, list):
             users = []
@@ -143,7 +143,7 @@ def pbd_cli():
             user = result
             pprint(user)
     elif action == "board":
-        result = proboards_scraper.database.query_boards(db, board_id=value)
+        result = db.query_boards(board_id=value)
 
         if isinstance(result, list):
             boards = []

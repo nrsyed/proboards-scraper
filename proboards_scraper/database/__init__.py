@@ -1,3 +1,2 @@
-from .query import query_boards, query_users
+from .database import Database
 from .schema import Base, Board, Category, Moderator, Post, Thread, User
-from .session import get_session
