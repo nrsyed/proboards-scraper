@@ -52,7 +52,7 @@ class Database:
             filters = {"id": obj.id}
 
         Metaclass = type(obj)
-        result = db.query(Metaclass).filter_by(**filters).first()
+        result = self.session.query(Metaclass).filter_by(**filters).first()
 
         type_to_str = {
             Board: "board",
@@ -139,7 +139,7 @@ class Database:
         guest = User(**guest_)
 
         # Query the database for all existing guests (negative user id).
-        query = db.query(User).filter(User.id < 0)
+        query = self.session.query(User).filter(User.id < 0)
 
         # Of the existing guests, query for the name of the current guest.
         this_guest = query.filter_by(name=guest.name).first()
