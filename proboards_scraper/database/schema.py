@@ -8,6 +8,142 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+class Board(Base):
+    """
+    Attributes:
+        id (int): Board number obtained from the board URL, eg,
+            ``https://yoursite.proboards.com/board/42/general`` refers to the
+            "General" board having board id 42.
+        category_id (int): Category to which this board belongs.
+        description (str): Board description.
+        name (str): Board name (required).
+        parent_id (int): Parent board primary key (if a sub-board).
+        password_protected (bool):
+        url (str): 
+
+
+        sub_boards: This board's sub-boards.
+        threads: This board's threads.
+    """
+    __tablename__ = "board"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    category_id = Column("category_id", ForeignKey("category.id"))
+    description = Column("description", String)
+    name = Column("name", String, nullable=False)
+    parent_id = Column("parent_id", ForeignKey("board.id"))
+    password_protected = Column("password_protected", Boolean)
+    url = Column("url", String)
+
+    sub_boards = relationship("Board")
+    threads = relationship("Thread")
+
+    # TODO: moderators
+    _moderators = relationship("Moderator")
+    moderators = association_proxy("_moderators", "_users")
+
+
+class Category(Base):
+    """
+    Attributes:
+        id (int): Category id number obtained from the main page source.
+        name (str): Category name.
+
+        boards: This category's boards (including sub-boards).
+    """
+    __tablename__ = "category"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    name = Column("name", String, nullable=False)
+
+    boards = relationship("Board")
+
+
+class Moderator(Base):
+    """
+    This table links a user to a board they moderate. A given moderation
+    relationship (i.e., board + user combination) must be unique.
+    Attributes:
+        board_id (int): Board from ``board`` table.
+        user_id (int): User from ``user`` table.
+    """
+    __tablename__ = "moderator"
+    __table_args__ = (UniqueConstraint("board_id", "user_id"),)
+
+    board_id = Column(
+        "board_id", Integer, ForeignKey("board.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _users = relationship("User")
+
+
+class Post(Base):
+    """
+    Attributes:
+        id (int):
+        date (str): When the post was made (Unix timestamp).
+        edit_user_id (int): User (in ``user`` table) who made the last edit.
+        last_edited (str): When the post was last edited (Unix timestamp); if
+            never, this field should be null.
+        message (str): Post content/message.
+        thread_id (int): Thread (in ``thread``) where the post was made.
+        url (str): Original post URL.
+        user_id (int): User (in ``user`` table) who made the post.
+    """
+    __tablename__ = "post"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    date = Column("date", String)
+    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
+    last_edited = Column("last_edited", String)
+    message = Column("message", String)
+    thread_id = Column(
+        "thread_id", ForeignKey("thread.id"), nullable=False
+    )
+    url = Column("url", String)
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
+    )
+
+
+class Thread(Base):
+    """
+    Attributes:
+        id: Thread id from thread URL.
+        announcement (bool):
+        board_id (int): Board (in ``board`` table) where the thread was made.
+        locked (bool):
+        title (str): Thread title.
+        url (str): Original URL.
+        sticky (bool):
+        user_id (int): User (in ``user`` table) who started the thread.
+
+        posts: This thread's posts.
+    """
+    __tablename__ = "thread"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+
+    # TODO: default for locked, sticky, announcement, check bool type
+    announcement = Column("announcement", Boolean)
+    board_id = Column(
+        "board_id", ForeignKey("board.id"), nullable=False
+    )
+    locked = Column("locked", Boolean)
+    sticky = Column("sticky", Boolean)
+    title = Column("title", String)
+    url = Column("url", String)
+    user_id = Column(
+        "user_id", ForeignKey("user.id"), nullable=False
+    )
+    views = Column("views", Integer)
+
+    posts = relationship("Post")
+
+
 class User(Base):
     """
     Attributes:
@@ -69,145 +205,6 @@ class User(Base):
     # they've started.
     posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
-
-
-class Category(Base):
-    """
-    Attributes:
-        id (int): Category id number obtained from the main page source.
-        name (str): Category name.
-
-        boards: This category's boards (including sub-boards).
-    """
-    __tablename__ = "category"
-
-    id = Column("id", Integer, primary_key=True, autoincrement=False)
-    name = Column("name", String, nullable=False)
-
-    boards = relationship("Board")
-
-
-class Board(Base):
-    """
-    Attributes:
-        id (int): Board number obtained from the board URL, eg,
-            ``https://yoursite.proboards.com/board/42/general`` refers to the
-            "General" board having board id 42.
-        category_id (int): Category to which this board belongs.
-        description (str): Board description.
-        name (str): Board name (required).
-        parent_id (int): Parent board primary key (if a sub-board).
-        password_protected (bool):
-        url (str): 
-
-
-        sub_boards: This board's sub-boards.
-        threads: This board's threads.
-    """
-    __tablename__ = "board"
-
-    id = Column("id", Integer, primary_key=True, autoincrement=False)
-    category_id = Column("category_id", ForeignKey("category.id"))
-    description = Column("description", String)
-    name = Column("name", String, nullable=False)
-    parent_id = Column("parent_id", ForeignKey("board.id"))
-    password_protected = Column("password_protected", Boolean)
-    url = Column("url", String)
-
-    sub_boards = relationship("Board")
-    threads = relationship("Thread")
-
-    # TODO: moderators
-    _moderators = relationship("Moderator")
-    moderators = association_proxy("_moderators", "_users")
-
-
-class Moderator(Base):
-    """
-    This table links a user to a board they moderate. A given moderation
-    relationship (i.e., board + user combination) must be unique.
-    Attributes:
-        board_id (int): Board from ``board`` table.
-        user_id (int): User from ``user`` table.
-    """
-    __tablename__ = "moderator"
-    __table_args__ = (UniqueConstraint("board_id", "user_id"),)
-
-    board_id = Column(
-        "board_id", Integer, ForeignKey("board.id"), primary_key=True
-    )
-    user_id = Column(
-        "user_id", Integer, ForeignKey("user.id"), primary_key=True
-    )
-
-    _users = relationship("User")
-
-
-class Thread(Base):
-    """
-    Attributes:
-        id: Thread id from thread URL.
-        title (str): Thread title.
-        url (str): Original URL.
-        locked (bool):
-        sticky (bool):
-        announcement (bool):
-
-        board_id (int): Board (in ``board`` table) where the thread was made.
-        user_id (int): User (in ``user`` table) who started the thread.
-
-        posts: This thread's posts.
-    """
-    __tablename__ = "thread"
-
-    id = Column("id", Integer, primary_key=True, autoincrement=False)
-
-    # TODO: default for locked, sticky, announcement, check bool type
-    announcement = Column("announcement", Boolean)
-    locked = Column("locked", Boolean)
-    sticky = Column("sticky", Boolean)
-    title = Column("title", String)
-    url = Column("url", String)
-
-    board_id = Column(
-        "board_id", ForeignKey("board.id"), nullable=False
-    )
-    user_id = Column(
-        "user_id", ForeignKey("user.id"), nullable=False
-    )
-
-    posts = relationship("Post")
-
-
-class Post(Base):
-    """
-    Attributes:
-        id (int):
-        date (str): When the post was made (Unix timestamp).
-        last_edited (str): When the post was last edited (Unix timestamp); if
-            never, this field should be null.
-        message (str): Post content/message.
-        url (str): Original post URL.
-
-        edit_user_id (int): User (in ``user`` table) who made the last edit.
-        thread_id (int): Thread (in ``thread``) where the post was made.
-        user_id (int): User (in ``user`` table) who made the post.
-    """
-    __tablename__ = "post"
-
-    id = Column("id", Integer, primary_key=True, autoincrement=False)
-    date = Column("date", String)
-    last_edited = Column("last_edited", String)
-    message = Column("message", String)
-    url = Column("url", String)
-
-    edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
-    thread_id = Column(
-        "thread_id", ForeignKey("thread.id"), nullable=False
-    )
-    user_id = Column(
-        "user_id", ForeignKey("user.id"), nullable=False
-    )
 
 
 #class Poll(Base):
