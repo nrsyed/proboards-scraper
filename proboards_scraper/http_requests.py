@@ -131,12 +131,13 @@ async def download_image(
         "status": {
             "get": None,
             "exists": None,
+            "valid": None
         },
         "image": {
             "url": url,
             "filename": None,
             "md5_hash": None,
-            "size": 0,
+            "size": None,
         },
     }
 
@@ -147,24 +148,30 @@ async def download_image(
             img = await response.read()
 
             # The file extension doesn't necessarily match the filetype, so we
-            # manually check the file header and set the correct extension.
+            # manually check the file header and set the correct extension. If
+            # the file doesn't correspond to a supported image filetype, we
+            # assume the downloaded file is invalid and skip it.
+            ret["status"]["valid"] = False
+
             filetype = imghdr.what(None, h=img)
+            if filetype is not None:
+                ret["status"]["valid"] = True
 
-            # Set the filestem to the md5 hash of the image.
-            img_md5 = hashlib.md5(img).hexdigest()
+                # Set the filestem to the md5 hash of the image.
+                img_md5 = hashlib.md5(img).hexdigest()
 
-            new_fname = f"{img_md5}.{filetype}"
+                new_fname = f"{img_md5}.{filetype}"
 
-            ret["image"]["filename"] = new_fname
-            ret["image"]["size"] = len(img)
-            ret["image"]["md5_hash"] = img_md5
+                ret["image"]["filename"] = new_fname
+                ret["image"]["size"] = len(img)
+                ret["image"]["md5_hash"] = img_md5
 
-            img_fpath = dst_dir / new_fname
+                img_fpath = dst_dir / new_fname
 
-            if not img_fpath.exists():
-                ret["status"]["exists"] = False
-                async with aiofiles.open(img_fpath, "wb") as f:
-                    await f.write(img)
-            else:
-                ret["status"]["exists"] = True
+                if not img_fpath.exists():
+                    ret["status"]["exists"] = False
+                    async with aiofiles.open(img_fpath, "wb") as f:
+                        await f.write(img)
+                else:
+                    ret["status"]["exists"] = True
     return ret

@@ -21,7 +21,7 @@ class Avatar(Base):
         "user_id", Integer, ForeignKey("user.id"), primary_key=True
     )
 
-    _user = relationship("User")
+    _image = relationship("Image")
 
 
 class Board(Base):
@@ -240,9 +240,11 @@ class User(Base):
 
     # One-to-one mapping of a user to their avatar, and one-to-many mapping
     # of all posts/threads they've made or started.
-    avatar = relationship("Avatar", foreign_keys="Avatar.user_id")
     posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
+
+    _avatar = relationship("Avatar")
+    avatar = association_proxy("_avatar", "image_id")
 
 
 #class Poll(Base):

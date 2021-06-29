@@ -6,7 +6,7 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Board, Category, Moderator, Post, Thread, User,
+    Base, Avatar, Board, Category, Image, Moderator, Post, Thread, User,
 )
 
 
@@ -79,8 +79,10 @@ class Database:
         result = self.session.query(Metaclass).filter_by(**filters).first()
 
         type_to_str = {
+            Avatar: "avatar",
             Board: "board",
             Category: "category",
+            Image: "image",
             Moderator: "moderator",
             Post: "post",
             Thread: "thread",
@@ -95,6 +97,17 @@ class Database:
         return inserted, obj
 
 
+    def insert_avatar(self, avatar_: dict):
+        avatar = Avatar(**avatar_)
+        filters = {
+            "image_id": avatar.image_id,
+            "user_id": avatar.user_id,
+        }
+        inserted, avatar = self.insert(avatar, filters)
+        self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
+        return avatar
+
+
     def insert_board(self, board_: dict):
         board = Board(**board_)
         inserted, board = self.insert(board)
@@ -107,6 +120,13 @@ class Database:
         inserted, category = self.insert(category)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
+
+
+    def insert_image(self, image_: dict):
+        image = Image(**image_)
+        inserted, image = self.insert(image)
+        self._insert_log_msg(f"Image {image.url}", inserted)
+        return image
 
 
     def insert_moderator(self, moderator_: dict):
