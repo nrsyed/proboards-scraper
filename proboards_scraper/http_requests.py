@@ -113,8 +113,7 @@ async def get_source(
 
 
 async def download_image(
-    url: str, session: aiohttp.ClientSession, dst_dir: pathlib.Path,
-    timeout: int = 10
+    url: str, session: aiohttp.ClientSession, dst_dir: pathlib.Path
 ):
     """
     Args:
@@ -141,7 +140,7 @@ async def download_image(
         },
     }
 
-    async with session.get(url, timeout=timeout) as response:
+    async with session.get(url) as response:
         ret["status"]["get"] = response.status
 
         if response.status == 200:
