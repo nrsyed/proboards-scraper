@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from typing import List, Tuple, Union
 
 import sqlalchemy
@@ -35,12 +36,13 @@ def serialize(obj):
 
 
 class Database:
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: pathlib.Path):
         """
         Args:
             db_path: Path to SQLite database file.
         """
-        engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
+        engine_str = f"sqlite:///{db_path}"
+        engine = sqlalchemy.create_engine(engine_str)
         Session = sqlalchemy.orm.sessionmaker(engine)
         session = Session()
         Base.metadata.create_all(engine)
