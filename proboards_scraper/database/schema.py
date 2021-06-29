@@ -8,6 +8,22 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+class Avatar(Base):
+    """
+    """
+    __tablename__ = "avatar"
+    __table_args__ = (UniqueConstraint("image_id", "user_id"),)
+
+    image_id = Column(
+        "image_id", Integer, ForeignKey("image.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _user = relationship("User")
+
+
 class Board(Base):
     """
     Attributes:
@@ -196,11 +212,9 @@ class User(Base):
         website (str): Optional
         website_url (str): Optional
 
+        avatar: relationship
         posts: relationship
         threads: relationship
-
-        TODO
-        avatar (bytes?): avatar as a bitmap?
     """
     __tablename__ = "user"
 
@@ -224,8 +238,9 @@ class User(Base):
     website = Column("website", String)
     website_url = Column("website_url", String)
 
-    # One-to-many mapping of a user and all posts they've made or threads
-    # they've started.
+    # One-to-one mapping of a user to their avatar, and one-to-many mapping
+    # of all posts/threads they've made or started.
+    avatar = relationship("Avatar", foreign_keys="Avatar.user_id")
     posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
 
