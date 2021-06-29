@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import concurrent.futures
 import http
+import imghdr
 import logging
 import os
 import pathlib
@@ -117,6 +118,29 @@ async def get_source(
     return bs4.BeautifulSoup(text, "html.parser")
 
 
+async def get_image(url: str, sess: aiohttp.ClientSession, dst_dir: str):
+    """
+    Args:
+        url: Image URL.
+        sess: aiohttp session.
+        dst_dir: Directory to which the image should be downloaded.
+    """
+    if url.startswith("//"):
+        url = f"https:{url}"
+
+    response = await sess.get(url)
+
+    retval = None
+    if response.status == 200:
+        img = await response.read()
+        filetype = imghdr.what(None, h=img)
+        # TODO: write image (with appropriate filename) to disk
+        breakpoint()
+    else:
+        # TODO: handle unsuccessful get
+        pass
+
+
 def get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
     next_href = None
@@ -138,7 +162,8 @@ def get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
 
 
 async def scrape_user(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager
+    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager,
+    image_dir: str = "images"
 ):
     """
     TODO
@@ -159,6 +184,14 @@ async def scrape_user(
         "div", class_="name_and_group float-right"
     )
     user["name"] = name_and_group.find("span", class_="big_username").text
+
+    # Download avatar.
+    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
+    avatar_url = avatar_wrapper.find("img")["src"]
+
+    # TODO
+    #if user["id"] == 17:
+    image = await get_image(avatar_url, sess)
 
     # The group name is contained between two <br> tags and is the element's
     # fourth child.
