@@ -1,4 +1,5 @@
 import asyncio
+import pathlib
 from typing import Union
 
 import aiohttp
@@ -6,15 +7,37 @@ import aiohttp
 from proboards_scraper.database import Database
 
 
-class QueueManager:
+class ScraperManager:
     def __init__(
-        self, db: Database, user_queue: Union[asyncio.Queue, None],
-        content_queue: asyncio.Queue, sess: aiohttp.ClientSession
+        self,
+        db: Database,
+        client_session: aiohttp.ClientSession,
+        content_queue: asyncio.Queue = None,
+        user_queue: asyncio.Queue = None,
+        image_dir: pathlib.Path = None
     ):
+        """
+        Args:
+            db:
+            client_session:
+            content_queue:
+            user_queue:
+        """
         self.db = db
+        self.client_session = client_session
+
+        if image_dir is None:
+            image_dir = pathlib.Path("./images").expanduser().resolve()
+        image_dir.mkdir(exist_ok=True)
+        self.image_dir = image_dir
+
+        if content_queue is None:
+            content_queue = asyncio.Queue()
         self.content_queue = content_queue
+
+        if user_queue is None:
+            user_queue = asyncio.Queue()
         self.user_queue = user_queue
-        self.sess = sess
 
 
     async def run(self):
@@ -50,4 +73,4 @@ class QueueManager:
                 insert_func = type_to_insert_func[type_]
                 insert_func(content)
 
-        await sess.close()
+        await client_session.close()

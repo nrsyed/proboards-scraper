@@ -1,5 +1,6 @@
 import argparse
 import logging
+import pathlib
 from pprint import pprint
 
 import proboards_scraper
@@ -62,9 +63,11 @@ def pbs_cli():
     )
 
     parser.add_argument(
-        "-d", "--database", type=str, default="forum.db",
-        help="Path to database file (default forum.db)"
+        "-o", "--output", type=pathlib.Path, default="site",
+        help="Path to output directory containing database and site files"
+        " (default ./site)"
     )
+
     parser.add_argument(
         "-U", "--no-users", action="store_true", dest="skip_users",
         help="Do not grab user profiles (only use this options if a database "
@@ -89,7 +92,7 @@ def pbs_cli():
     configure_logging(args.verbosity)
 
     proboards_scraper.scrape_site(
-        args.url, args.database, username=args.username,
+        args.url, dst_dir=args.output, username=args.username,
         password=args.password, skip_users=args.skip_users
     )
 
