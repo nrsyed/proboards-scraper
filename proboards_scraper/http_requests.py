@@ -1,4 +1,6 @@
+import aiofiles
 import asyncio
+import hashlib
 import http
 import imghdr
 import logging
@@ -111,7 +113,8 @@ async def get_source(
 
 
 async def download_image(
-    url: str, session: aiohttp.ClientSession, dst_dir: pathlib.Path
+    url: str, session: aiohttp.ClientSession, dst_dir: pathlib.Path,
+    timeout: int = 10
 ):
     """
     Args:
@@ -122,27 +125,46 @@ async def download_image(
     if url.startswith("//"):
         url = f"https:{url}"
 
-    response = await session.get(url)
+    logger.debug(f"Downloading image: {url}")
 
-    retval = None
-    if response.status == 200:
-        img = await response.read()
+    ret = {
+        "status": {
+            "get": None,
+            "exists": None,
+        },
+        "image": {
+            "url": url,
+            "filename": None,
+            "md5_hash": None,
+            "size": 0,
+        },
+    }
 
-        orig_fname = os.path.split(url)[1]
-        fstem = orig_fname.splitext(orig_fname)[0]
+    async with session.get(url, timeout=timeout) as response:
+        ret["status"]["get"] = response.status
 
-        # The file extension doesn't necessarily match the filetype, so we
-        # manually check the file header and set the correct extension.
-        filetype = imghdr.what(None, h=img)
-        new_fname = f"{fstem}.{filetype}"
+        if response.status == 200:
+            img = await response.read()
 
-        fpath = dst_dir / new_fname
+            # The file extension doesn't necessarily match the filetype, so we
+            # manually check the file header and set the correct extension.
+            filetype = imghdr.what(None, h=img)
 
-        # TODO: write image (with appropriate filename) to disk
-        breakpoint()
-    else:
-        # TODO: handle unsuccessful get
-        pass
+            # Set the filestem to the md5 hash of the image.
+            img_md5 = hashlib.md5(img).hexdigest()
 
+            new_fname = f"{img_md5}.{filetype}"
 
+            ret["image"]["filename"] = new_fname
+            ret["image"]["size"] = len(img)
+            ret["image"]["md5_hash"] = img_md5
 
+            img_fpath = dst_dir / new_fname
+
+            if not img_fpath.exists():
+                ret["status"]["exists"] = False
+                async with aiofiles.open(img_fpath, "wb") as f:
+                    await f.write(img)
+            else:
+                ret["status"]["exists"] = True
+    return ret
