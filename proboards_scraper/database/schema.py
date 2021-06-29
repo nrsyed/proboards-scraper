@@ -59,6 +59,29 @@ class Category(Base):
     boards = relationship("Board")
 
 
+class Image(Base):
+    """
+    Generic image table/class for storing metadata for any image. Image files
+    themselves should be downloaded and stored somewhere; this table only
+    records the filename of the downloaded file (which may differ from the
+    original filename, found in the url).
+
+    Attributes:
+        id (int): Autoincrementing primary key.
+        filename (str): Filename of the downloaded file on disk.
+        md5_hash (str): MD5 hash of the downloaded file.
+        size (int): Size, in bytes, of the downloaded file.
+        url (str): Original URL of the file.
+    """
+    __tablename__ = "image"
+
+    id = Column("id", Integer, primary_key=True)
+    filename = Column("filename", String)
+    md5_hash = Column("md5_hash", String)
+    size = Column("size", Integer)
+    url = Column("url", String)
+
+
 class Moderator(Base):
     """
     This table links a user to a board they moderate. A given moderation
