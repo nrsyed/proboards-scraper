@@ -117,7 +117,7 @@ async def get_source(
     return bs4.BeautifulSoup(text, "html.parser")
 
 
-def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
+def get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
     next_href = None
 
@@ -137,7 +137,7 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-async def _get_user(
+async def scrape_user(
     url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager
 ):
     """
@@ -279,7 +279,7 @@ async def _get_user(
     return user
 
 
-async def get_users(
+async def scrape_users(
     url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager
 ):
     """
@@ -292,13 +292,13 @@ async def get_users(
     member_hrefs = []
 
     source = await get_source(members_page_url, sess)
-    _member_hrefs, next_href = _get_user_urls(source)
+    _member_hrefs, next_href = get_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{url}{next_href}"
         source = await get_source(next_url, sess)
-        _member_hrefs, next_href = _get_user_urls(source)
+        _member_hrefs, next_href = get_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
@@ -308,7 +308,7 @@ async def get_users(
     tasks = []
 
     for member_url in member_urls:
-        task = loop.create_task(_get_user(member_url, sess, queue_manager))
+        task = loop.create_task(scrape_user(member_url, sess, queue_manager))
         tasks.append(task)
 
     await asyncio.wait(tasks)
@@ -564,7 +564,7 @@ async def scrape_board(
                 )
 
 
-async def get_content(
+async def scrape_content(
     url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager,
 ):
     """
@@ -664,10 +664,10 @@ def scrape_site(
     queue_manager = QueueManager(db, user_queue, content_queue, sess)
 
     if not skip_users:
-        users_task = get_users(url, sess, queue_manager)
+        users_task = scrape_users(url, sess, queue_manager)
         tasks.append(users_task)
 
-    content_task = get_content(url, sess, queue_manager)
+    content_task = scrape_content(url, sess, queue_manager)
     tasks.append(content_task)
 
     database_task = queue_manager.run()
