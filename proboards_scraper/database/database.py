@@ -1,11 +1,12 @@
 import logging
+import pathlib
 from typing import List, Tuple, Union
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Board, Category, Moderator, Post, Thread, User,
+    Base, Avatar, Board, Category, Image, Moderator, Post, Thread, User,
 )
 
 
@@ -16,7 +17,7 @@ def serialize(obj):
     """
     TODO
     """
-    if isinstance(obj, (Board, Category, Post, Thread, User)):
+    if isinstance(obj, (Board, Category, Image, Post, Thread, User)):
         dict_ = {}
         for k, v in vars(obj).items():
             if not k.startswith("_"):
@@ -26,6 +27,12 @@ def serialize(obj):
         # objects are not in Board.__dict__ and must be separately serialized.
         if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
+        elif isinstance(obj, User):
+            avatar = serialize(obj.avatar[0])
+            dict_["avatar"] = {
+                "filename": avatar["filename"],
+                "url": avatar["url"],
+            }
 
         return dict_
     elif isinstance(obj, list):
@@ -35,12 +42,13 @@ def serialize(obj):
 
 
 class Database:
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: pathlib.Path):
         """
         Args:
             db_path: Path to SQLite database file.
         """
-        engine = sqlalchemy.create_engine(f"sqlite:///{db_path}")
+        engine_str = f"sqlite:///{db_path}"
+        engine = sqlalchemy.create_engine(engine_str)
         Session = sqlalchemy.orm.sessionmaker(engine)
         session = Session()
         Base.metadata.create_all(engine)
@@ -77,8 +85,10 @@ class Database:
         result = self.session.query(Metaclass).filter_by(**filters).first()
 
         type_to_str = {
+            Avatar: "avatar",
             Board: "board",
             Category: "category",
+            Image: "image",
             Moderator: "moderator",
             Post: "post",
             Thread: "thread",
@@ -93,6 +103,17 @@ class Database:
         return inserted, obj
 
 
+    def insert_avatar(self, avatar_: dict):
+        avatar = Avatar(**avatar_)
+        filters = {
+            "image_id": avatar.image_id,
+            "user_id": avatar.user_id,
+        }
+        inserted, avatar = self.insert(avatar, filters)
+        self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
+        return avatar
+
+
     def insert_board(self, board_: dict):
         board = Board(**board_)
         inserted, board = self.insert(board)
@@ -105,6 +126,13 @@ class Database:
         inserted, category = self.insert(category)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
+
+
+    def insert_image(self, image_: dict):
+        image = Image(**image_)
+        inserted, image = self.insert(image)
+        self._insert_log_msg(f"Image {image.url}", inserted)
+        return image
 
 
     def insert_moderator(self, moderator_: dict):

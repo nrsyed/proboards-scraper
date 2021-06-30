@@ -2,122 +2,27 @@
 import argparse
 import asyncio
 import concurrent.futures
-import http
 import logging
 import os
 import pathlib
 import re
-import sys
 import time
 from typing import Any, List, Tuple, Union
 
 import aiohttp
 import bs4
-import selenium.webdriver
 
-from .queue_manager import QueueManager
+from .http_requests import (
+    download_image, get_login_cookies, get_login_session, get_source
+)
+from .scraper_manager import ScraperManager
 from proboards_scraper.database import Database
 
 
 logger = logging.getLogger(__name__)
         
 
-def get_login_cookies(
-    home_url: str, username: str, password: str, page_load_wait: int = 1
-) -> dict:
-    """
-    TODO
-    """
-    chrome_opts = selenium.webdriver.ChromeOptions()
-    chrome_opts.headless = True
-    driver = selenium.webdriver.Chrome(options=chrome_opts)
-    driver.get(home_url)
-    time.sleep(page_load_wait)
-
-    links = driver.find_elements_by_tag_name("a")
-    login_url = None
-
-    for link in links:
-        href = link.get_attribute("href")
-        if href.startswith("https://login.proboards.com/login"):
-            login_url = href
-            break
-
-    # Navigate to login page and fill in username/password fields.
-    driver.get(login_url)
-    time.sleep(page_load_wait)
-
-    email_input = None
-    password_input = None
-    submit_input = None
-
-    inputs = driver.find_elements_by_tag_name("input")
-    for input_ in inputs:
-        try:
-            input_name = input_.get_attribute("name")
-            if input_name == "email":
-                email_input = input_
-            elif input_name == "password":
-                password_input = input_
-            elif input_name == "continue":
-                submit_input = input_
-        except:
-            # TODO
-            pass
-
-    email_input.send_keys(username)
-    password_input.send_keys(password)
-    submit_input.click()
-    time.sleep(page_load_wait)
-
-    cookies = driver.get_cookies()
-    return cookies
-
-
-def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
-    """
-    TODO
-    """
-    logger.debug("Creating aiohttp login session from cookies")
-    sess = aiohttp.ClientSession()
-
-    morsels = {}
-    for cookie in cookies:
-        # https://docs.python.org/3/library/http.cookies.html#morsel-objects
-        morsel = http.cookies.Morsel()
-        morsel.set(cookie["name"], cookie["value"], cookie["value"])
-        morsel["domain"] = cookie["domain"]
-        morsel["httponly"] = cookie["httpOnly"]
-        morsel["path"] = cookie["path"]
-        morsel["secure"] = cookie["secure"]
-
-        # NOTE: ignore expires field; if it's absent, the cookie remains
-        # valid for the duration of the session.
-        #if "expiry" in cookie:
-        #    morsel["expires"] = cookie["expiry"]
-
-        morsels[cookie["name"]] = morsel
-
-    sess.cookie_jar.update_cookies(morsels)
-
-    logger.debug("Added cookies to aiohttp session")
-    return sess
-
-
-async def get_source(
-    url: str, sess: aiohttp.ClientSession
-) -> bs4.BeautifulSoup:
-    """
-    TODO
-    """
-    logger.debug(f"Getting page source for {url}")
-    # TODO: check response HTTP status code
-    resp = await sess.get(url)
-    text = await resp.text()
-    return bs4.BeautifulSoup(text, "html.parser")
-
-
-def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
+def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
     next_href = None
 
@@ -137,9 +42,7 @@ def _get_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-async def _get_user(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager
-):
+async def scrape_user(url: str, manager: ScraperManager):
     """
     TODO
     """
@@ -151,7 +54,7 @@ async def _get_user(
         "id": int(os.path.split(url)[1])
     }
 
-    source = await get_source(url, sess)
+    source = await get_source(url, manager.client_session)
     user_container = source.find("div", {"class": "show-user"})
 
     # Get display name and group.
@@ -159,6 +62,32 @@ async def _get_user(
         "div", class_="name_and_group float-right"
     )
     user["name"] = name_and_group.find("span", class_="big_username").text
+
+    # Download avatar.
+    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
+    avatar_url = avatar_wrapper.find("img")["src"]
+
+    avatar_ret = await download_image(
+        avatar_url, manager.client_session, manager.image_dir
+    )
+
+    image = avatar_ret["image"]
+    
+    # We need an image id to associate this image with a user as an avatar;
+    # thus, we must interact with the database directly to retrieve the
+    # image id (if it already exists in the database) or add then retrieve
+    # the id of the newly added image (if it doesn't already exist).
+    # NOTE: even if the image wasn't obtained successfully or is invalid, we
+    # still store an Image in the database that contains the original avatar
+    # URL (and an Avatar linking that Image to the current user).
+    image_db_obj = manager.db.insert_image(image)
+    image_id = image_db_obj.id
+
+    avatar = {
+        "user_id": user["id"],
+        "image_id": image_id,
+    }
+    manager.db.insert_avatar(avatar)
 
     # The group name is contained between two <br> tags and is the element's
     # fourth child.
@@ -274,31 +203,29 @@ async def _get_user(
             messenger_str = ";".join(messenger_str_list)
             user["instant_messengers"] = messenger_str
 
-    await queue_manager.user_queue.put(user)
+    await manager.user_queue.put(user)
     logger.debug(f"Got user profile info for user {user['name']}")
     return user
 
 
-async def get_users(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager
-):
+async def scrape_users(url: str, manager: ScraperManager):
     """
     url: Site base URL.
-    sess: Login session.
+    manager:
     """
     logger.info(f"Getting user profile URLs from {url}")
 
     members_page_url = f"{url}/members"
     member_hrefs = []
 
-    source = await get_source(members_page_url, sess)
-    _member_hrefs, next_href = _get_user_urls(source)
+    source = await get_source(members_page_url, manager.client_session)
+    _member_hrefs, next_href = scrape_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{url}{next_href}"
-        source = await get_source(next_url, sess)
-        _member_hrefs, next_href = _get_user_urls(source)
+        source = await get_source(next_url, manager.client_session)
+        _member_hrefs, next_href = scrape_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
     member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
@@ -308,19 +235,24 @@ async def get_users(
     tasks = []
 
     for member_url in member_urls:
-        task = loop.create_task(_get_user(member_url, sess, queue_manager))
+        task = loop.create_task(scrape_user(member_url, manager))
         tasks.append(task)
 
     await asyncio.wait(tasks)
-    await queue_manager.user_queue.put(None)
+    await manager.user_queue.put(None)
     users = [task.result() for task in tasks]
     return users
 
 
 async def scrape_thread(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager,
-    board_id: int = None, user_id: int = None, views: int = None,
-    announcement: bool = False, locked: bool = False, sticky: bool = False
+    url: str,
+    manager: ScraperManager,
+    board_id: int = None,
+    user_id: int = None,
+    views: int = None,
+    announcement: bool = False,
+    locked: bool = False,
+    sticky: bool = False
 ):
     """
     TODO
@@ -331,7 +263,7 @@ async def scrape_thread(
     site_url = match.groups()[0]
     thread_id = int(match.groups()[1])
 
-    source = await get_source(url, sess)
+    source = await get_source(url, manager.client_session)
 
     post_container = source.find("div", class_="container posts")
     title_bar = post_container.find("div", class_="title-bar")
@@ -349,7 +281,7 @@ async def scrape_thread(
         "user_id": user_id,
         "views": views,
     }
-    await queue_manager.content_queue.put(thread)
+    await manager.content_queue.put(thread)
 
     pages_remaining = True
     while pages_remaining:
@@ -372,7 +304,7 @@ async def scrape_thread(
                 }
 
                 # Get new guest user id.
-                guest_db_obj = queue_manager.db.insert_guest(guest)
+                guest_db_obj = manager.db.insert_guest(guest)
                 create_user_id = guest_db_obj.id
             else:
                 # <a> tag href attribute is of the form "/user/5".
@@ -409,7 +341,7 @@ async def scrape_thread(
                 "url": f"{site_url}/post/{post_id}",
                 "user_id": user_id,
             }
-            await queue_manager.content_queue.put(post)
+            await manager.content_queue.put(post)
 
             # Continue to next page, if any.
             control_bar = post_container.find("div", class_="control-bar")
@@ -420,13 +352,15 @@ async def scrape_thread(
             else:
                 next_href = next_btn.find("a")["href"]
                 next_url = f"{site_url}{next_href}"
-                source = await get_source(next_url, sess)
+                source = await get_source(next_url, manager.client_session)
                 post_container = source.find("div", class_="container posts")
 
 
 async def scrape_board(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager,
-    category_id: int = None, moderators: List[int] = None,
+    url: str,
+    manager: ScraperManager,
+    category_id: int = None,
+    moderators: List[int] = None,
     parent_id: int = None
 ):
     """
@@ -443,7 +377,7 @@ async def scrape_board(
     site_url = match.groups()[0]
     board_id = int(match.groups()[1])
 
-    source = await get_source(url, sess)
+    source = await get_source(url, manager.client_session)
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
@@ -472,7 +406,7 @@ async def scrape_board(
         "password_protected": password_protected,
         "url": url,
     }
-    await queue_manager.content_queue.put(board)
+    await manager.content_queue.put(board)
 
     if moderators:
         for user_id in moderators:
@@ -481,7 +415,7 @@ async def scrape_board(
                 "user_id": user_id,
                 "board_id": board_id,
             }
-            await queue_manager.content_queue.put(moderator)
+            await manager.content_queue.put(moderator)
 
     # Add any sub-boards to the queue.
     subboard_container = source.find("div", class_="container boards")
@@ -495,7 +429,7 @@ async def scrape_board(
             subboard_url = site_url + href
 
             await scrape_board(
-                subboard_url, sess, queue_manager, category_id=category_id,
+                subboard_url, manager, category_id=category_id,
                 parent_id=board_id
             )
 
@@ -531,7 +465,7 @@ async def scrape_board(
                     }
 
                     # Get new guest user id.
-                    guest_db_obj = queue_manager.db.insert_guest(guest)
+                    guest_db_obj = manager.db.insert_guest(guest)
                     create_user_id = guest_db_obj.id
                 else:
                     # The href attribute is of the form "/user/12".
@@ -543,7 +477,7 @@ async def scrape_board(
                 thread_href = anchor["href"]
                 thread_url = site_url + thread_href
                 await scrape_thread(
-                    thread_url, sess, queue_manager, board_id=board_id,
+                    thread_url, manager, board_id=board_id,
                     user_id=create_user_id, views=views,
                     announcement=announcement, locked=locked, sticky=sticky,
                 )
@@ -558,22 +492,20 @@ async def scrape_board(
                 next_page_href = next_btn.find("a")["href"]
                 next_page_url = site_url + next_page_href
                 logger.info(f"Getting source for {next_page_url}")
-                source = await get_source(next_page_url, sess)
+                source = await get_source(next_page_url, manager.client_session)
                 thread_container = source.find(
                     "div", class_="container threads"
                 )
 
 
-async def get_content(
-    url: str, sess: aiohttp.ClientSession, queue_manager: QueueManager,
-):
+async def scrape_content(url: str, manager: ScraperManager):
     """
     Scrape all categories/boards from the main page.
 
     Args:
         url: Homepage URL.
     """
-    source = await get_source(url, sess)
+    source = await get_source(url, manager.client_session)
     categories = source.findAll("div", class_="container boards")
 
     for category_ in categories:
@@ -592,7 +524,7 @@ async def get_content(
             "name": category_name,
         }
 
-        await queue_manager.content_queue.put(category)
+        await manager.content_queue.put(category)
 
         boards = category_.findAll(
             "tr",
@@ -615,62 +547,67 @@ async def get_content(
                 ]
 
             await scrape_board(
-                board_url, sess, queue_manager, category_id=category_id,
+                board_url, manager, category_id=category_id,
                 moderators=moderator_ids
             )
 
-    await queue_manager.content_queue.put(None)
+    await manager.content_queue.put(None)
 
 
 def scrape_site(
-    url: str, db_path: str, username: str = None, password: str = None,
+    url: str,
+    dst_dir: pathlib.Path = "site",
+    username: str = None,
+    password: str = None,
     skip_users: bool = False
 ):
     """
     Args:
         url:
+        dst_dir:
         username:
         password:
-        db_path:
         skip_users:
     """
-    url = url.rstrip("/")
+    dst_dir = dst_dir.expanduser().resolve()
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    image_dir = dst_dir / "images"
+    image_dir.mkdir(exist_ok=True)
+
+    db_path = dst_dir / "forum.db"
+    db = Database(db_path)
 
     # Get cookies for parts of the site requiring login authentication.
+    url = url.rstrip("/")
     if username and password:
         logger.info(f"Logging in to {url}")
         cookies = get_login_cookies(url, username, password)
 
         # Create a persistent aiohttp login session from the cookies.
-        sess = get_login_session(cookies)
+        client_session = get_login_session(cookies)
         logger.info("Login successful")
     else:
         logger.info(
             "Username and/or password not provided; proceeding without login"
         )
-        sess = aiohttp.ClientSession()
+        client_session = aiohttp.ClientSession()
 
     tasks = []
 
-    user_queue = None
-    if not skip_users:
-        user_queue = asyncio.Queue()
-    else:
+    manager = ScraperManager(db, client_session, image_dir=image_dir)
+
+    if skip_users:
+        manager.user_queue = None
         logger.info("Skipping user profiles")
-
-    content_queue = asyncio.Queue()
-
-    db = Database(db_path)
-    queue_manager = QueueManager(db, user_queue, content_queue, sess)
-
-    if not skip_users:
-        users_task = get_users(url, sess, queue_manager)
+    else:
+        users_task = scrape_users(url, manager)
         tasks.append(users_task)
 
-    content_task = get_content(url, sess, queue_manager)
+    content_task = scrape_content(url, manager)
     tasks.append(content_task)
 
-    database_task = queue_manager.run()
+    database_task = manager.run()
     tasks.append(database_task)
 
     task_group = asyncio.gather(*tasks)
