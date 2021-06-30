@@ -103,7 +103,7 @@ def pbd_cli():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-d", "--database", type=str, default="forum.db",
+        "-d", "--database", type=str, default="site/forum.db",
         help="Path to database file"
     )
 
