@@ -10,6 +10,7 @@ Base = declarative_base()
 
 class Avatar(Base):
     """
+    This table links a user to their avatar.
     """
     __tablename__ = "avatar"
     __table_args__ = (UniqueConstraint("image_id", "user_id"),)
@@ -54,7 +55,6 @@ class Board(Base):
     sub_boards = relationship("Board")
     threads = relationship("Thread")
 
-    # TODO: moderators
     _moderators = relationship("Moderator")
     moderators = association_proxy("_moderators", "_users")
 
@@ -244,7 +244,7 @@ class User(Base):
     threads = relationship("Thread")
 
     _avatar = relationship("Avatar")
-    avatar = association_proxy("_avatar", "image_id")
+    avatar = association_proxy("_avatar", "_image")
 
 
 #class Poll(Base):
