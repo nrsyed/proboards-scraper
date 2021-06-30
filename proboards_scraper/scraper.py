@@ -1,13 +1,11 @@
 # TODO: announcement thread (avoid visiting in every board)
-import argparse
 import asyncio
-import concurrent.futures
 import logging
 import os
 import pathlib
 import re
 import time
-from typing import Any, List, Tuple, Union
+from typing import List, Tuple
 
 import aiohttp
 import bs4
@@ -20,7 +18,7 @@ from proboards_scraper.database import Database
 
 
 logger = logging.getLogger(__name__)
-        
+
 
 def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
@@ -72,7 +70,7 @@ async def scrape_user(url: str, manager: ScraperManager):
     )
 
     image = avatar_ret["image"]
-    
+
     # We need an image id to associate this image with a user as an avatar;
     # thus, we must interact with the database directly to retrieve the
     # image id (if it already exists in the database) or add then retrieve
@@ -286,7 +284,7 @@ async def scrape_thread(
     pages_remaining = True
     while pages_remaining:
         posts = post_container.findAll("tr", class_="post")
-        
+
         for post_ in posts:
             # Each post <tr> tag has an id attribute of the form:
             # <tr id="post-1234">
@@ -305,7 +303,7 @@ async def scrape_thread(
 
                 # Get new guest user id.
                 guest_db_obj = manager.db.insert_guest(guest)
-                create_user_id = guest_db_obj.id
+                user_id = guest_db_obj.id
             else:
                 # <a> tag href attribute is of the form "/user/5".
                 user_link = left_panel.find("a", class_="user-link")
@@ -381,7 +379,7 @@ async def scrape_board(
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
-    
+
     description = None
     password_protected = None
     if (
@@ -394,7 +392,9 @@ async def scrape_board(
         password_protected = True
     else:
         board_name = stats_container.find("div", class_="board-name").text
-        description = stats_container.find("div", class_="board-description").text
+        description = stats_container.find(
+            "div", class_="board-description"
+        ).text
 
     board = {
         "type": "board",
@@ -492,7 +492,9 @@ async def scrape_board(
                 next_page_href = next_btn.find("a")["href"]
                 next_page_url = site_url + next_page_href
                 logger.info(f"Getting source for {next_page_url}")
-                source = await get_source(next_page_url, manager.client_session)
+                source = await get_source(
+                    next_page_url, manager.client_session
+                )
                 thread_container = source.find(
                     "div", class_="container threads"
                 )

@@ -1,14 +1,12 @@
-import aiofiles
-import asyncio
 import hashlib
 import http
 import imghdr
 import logging
-import os
 import pathlib
 import time
 from typing import List
 
+import aiofiles
 import aiohttp
 import bs4
 import selenium.webdriver
@@ -56,8 +54,7 @@ def get_login_cookies(
                 password_input = input_
             elif input_name == "continue":
                 submit_input = input_
-        except:
-            # TODO
+        except Exception:
             pass
 
     email_input.send_keys(username)
@@ -88,8 +85,8 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
 
         # NOTE: ignore expires field; if it's absent, the cookie remains
         # valid for the duration of the session.
-        #if "expiry" in cookie:
-        #    morsel["expires"] = cookie["expiry"]
+        # if "expiry" in cookie:
+        #     morsel["expires"] = cookie["expiry"]
 
         morsels[cookie["name"]] = morsel
 
