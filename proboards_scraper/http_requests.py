@@ -153,6 +153,10 @@ async def download_image(
             ret["status"]["valid"] = False
 
             filetype = imghdr.what(None, h=img)
+
+            if filetype == "jpeg":
+                filetype = "jpg"
+
             if filetype is not None:
                 ret["status"]["valid"] = True
 
