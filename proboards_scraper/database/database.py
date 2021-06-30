@@ -17,7 +17,7 @@ def serialize(obj):
     """
     TODO
     """
-    if isinstance(obj, (Board, Category, Post, Thread, User)):
+    if isinstance(obj, (Board, Category, Image, Post, Thread, User)):
         dict_ = {}
         for k, v in vars(obj).items():
             if not k.startswith("_"):
@@ -27,6 +27,12 @@ def serialize(obj):
         # objects are not in Board.__dict__ and must be separately serialized.
         if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
+        elif isinstance(obj, User):
+            avatar = serialize(obj.avatar[0])
+            dict_["avatar"] = {
+                "filename": avatar["filename"],
+                "url": avatar["url"],
+            }
 
         return dict_
     elif isinstance(obj, list):
