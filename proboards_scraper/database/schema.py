@@ -8,6 +8,23 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+class Avatar(Base):
+    """
+    This table links a user to their avatar.
+    """
+    __tablename__ = "avatar"
+    __table_args__ = (UniqueConstraint("image_id", "user_id"),)
+
+    image_id = Column(
+        "image_id", Integer, ForeignKey("image.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _image = relationship("Image")
+
+
 class Board(Base):
     """
     Attributes:
@@ -38,7 +55,6 @@ class Board(Base):
     sub_boards = relationship("Board")
     threads = relationship("Thread")
 
-    # TODO: moderators
     _moderators = relationship("Moderator")
     moderators = association_proxy("_moderators", "_users")
 
@@ -57,6 +73,29 @@ class Category(Base):
     name = Column("name", String, nullable=False)
 
     boards = relationship("Board")
+
+
+class Image(Base):
+    """
+    Generic image table/class for storing metadata for any image. Image files
+    themselves should be downloaded and stored somewhere; this table only
+    records the filename of the downloaded file (which may differ from the
+    original filename, found in the url).
+
+    Attributes:
+        id (int): Autoincrementing primary key.
+        filename (str): Filename of the downloaded file on disk.
+        md5_hash (str): MD5 hash of the downloaded file.
+        size (int): Size, in bytes, of the downloaded file.
+        url (str): Original URL of the file.
+    """
+    __tablename__ = "image"
+
+    id = Column("id", Integer, primary_key=True)
+    filename = Column("filename", String)
+    md5_hash = Column("md5_hash", String)
+    size = Column("size", Integer)
+    url = Column("url", String)
 
 
 class Moderator(Base):
@@ -173,11 +212,9 @@ class User(Base):
         website (str): Optional
         website_url (str): Optional
 
+        avatar: relationship
         posts: relationship
         threads: relationship
-
-        TODO
-        avatar (bytes?): avatar as a bitmap?
     """
     __tablename__ = "user"
 
@@ -201,10 +238,13 @@ class User(Base):
     website = Column("website", String)
     website_url = Column("website_url", String)
 
-    # One-to-many mapping of a user and all posts they've made or threads
-    # they've started.
+    # One-to-one mapping of a user to their avatar, and one-to-many mapping
+    # of all posts/threads they've made or started.
     posts = relationship("Post", foreign_keys="Post.user_id")
     threads = relationship("Thread")
+
+    _avatar = relationship("Avatar")
+    avatar = association_proxy("_avatar", "_image")
 
 
 #class Poll(Base):
