@@ -1,6 +1,5 @@
 import asyncio
 import pathlib
-from typing import Union
 
 import aiohttp
 
@@ -39,7 +38,6 @@ class ScraperManager:
             user_queue = asyncio.Queue()
         self.user_queue = user_queue
 
-
     async def run(self):
         if self.user_queue is not None:
             all_users_added = False
@@ -73,4 +71,4 @@ class ScraperManager:
                 insert_func = type_to_insert_func[type_]
                 insert_func(content)
 
-        await client_session.close()
+        await self.client_session.close()

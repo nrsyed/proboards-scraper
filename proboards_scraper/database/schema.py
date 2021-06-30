@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
+    Boolean, Column, Integer, ForeignKey, String, UniqueConstraint
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
@@ -36,7 +36,7 @@ class Board(Base):
         name (str): Board name (required).
         parent_id (int): Parent board primary key (if a sub-board).
         password_protected (bool):
-        url (str): 
+        url (str):
 
 
         sub_boards: This board's sub-boards.
@@ -245,11 +245,3 @@ class User(Base):
 
     _avatar = relationship("Avatar")
     avatar = association_proxy("_avatar", "_image")
-
-
-#class Poll(Base):
-#    """
-#    Attributes:
-#        id (int):
-#    """
-#    __tablename__ = "poll"

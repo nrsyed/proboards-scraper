@@ -56,7 +56,6 @@ class Database:
         self.engine = engine
         self.session = session
 
-
     def _insert_log_msg(self, item_desc: str, inserted: bool):
         """
         Args:
@@ -67,7 +66,6 @@ class Database:
             logger.info(f"{item_desc} added to database")
         else:
             logger.info(f"{item_desc} already exists in database")
-
 
     def insert(
         self, obj: sqlalchemy.orm.DeclarativeMeta, filters: dict = None
@@ -84,24 +82,12 @@ class Database:
         Metaclass = type(obj)
         result = self.session.query(Metaclass).filter_by(**filters).first()
 
-        type_to_str = {
-            Avatar: "avatar",
-            Board: "board",
-            Category: "category",
-            Image: "image",
-            Moderator: "moderator",
-            Post: "post",
-            Thread: "thread",
-            User: "user",
-        }
-
         inserted = False
         if result is None:
             self.session.add(obj)
             self.session.commit()
             inserted = True
         return inserted, obj
-
 
     def insert_avatar(self, avatar_: dict):
         avatar = Avatar(**avatar_)
@@ -113,13 +99,11 @@ class Database:
         self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
         return avatar
 
-
     def insert_board(self, board_: dict):
         board = Board(**board_)
         inserted, board = self.insert(board)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
-
 
     def insert_category(self, category_: dict):
         category = Category(**category_)
@@ -127,13 +111,11 @@ class Database:
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
-
     def insert_image(self, image_: dict):
         image = Image(**image_)
         inserted, image = self.insert(image)
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
-
 
     def insert_moderator(self, moderator_: dict):
         moderator = Moderator(**moderator_)
@@ -148,10 +130,8 @@ class Database:
         )
         return moderator
 
-
     def insert_poll(self):
         raise NotImplementedError
-
 
     def insert_post(self, post_: dict):
         post = Post(**post_)
@@ -159,20 +139,17 @@ class Database:
         self._insert_log_msg(f"Post {post.id}", inserted)
         return post
 
-
     def insert_thread(self, thread_: dict):
         thread = Thread(**thread_)
         inserted, thread = self.insert(thread)
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
-        
 
     def insert_user(self, user_: dict):
         user = User(**user_)
         inserted, user = self.insert(user)
         self._insert_log_msg(f"User {user.name}", inserted)
         return user
-
 
     def insert_guest(self, guest_: dict):
         """
@@ -212,7 +189,6 @@ class Database:
         self._insert_log_msg(f"Guest {guest.name}", inserted)
         return guest
 
-
     def query_users(self, user_id: int = None) -> Union[List[dict], dict]:
         """
         Return a list of all users if no ``user_num`` provided, or a specific
@@ -225,7 +201,6 @@ class Database:
         else:
             result = result.all()
         return serialize(result)
-
 
     def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
         """
