@@ -124,12 +124,14 @@ class Poll(Base):
     """
     Attributes:
         id (int): The thread id to which this poll belongs.
+        name (str): Poll name, i.e., the poll question.
         options: The options associated with this poll.
         users: Users who have voted in this poll.
     """
     __tablename__ = "poll"
 
     id = Column("id", Integer, ForeignKey("thread.id"), primary_key=True)
+    name = Column("name", String)
     options = relationship("PollOption")
     _voters = relationship("PollVoter")
     voters = association_proxy("_voters", "_user")
