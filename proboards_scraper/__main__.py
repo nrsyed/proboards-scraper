@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import logging
 import pathlib
 from pprint import pprint
@@ -17,6 +18,10 @@ def configure_logging(verbosity: int = 2):
     5: vvverbose (show proboards_scraper DEBUG, imported module DEBUG)
 
     """
+    datetime_fmt = "%Y-%m-%d-%H-%M-%S"
+    current_dt = datetime.now().strftime(datetime_fmt)
+    filename = f"{current_dt}.log"
+
     scraper_log_level = logging.CRITICAL
     import_log_level = logging.CRITICAL
 
@@ -35,15 +40,22 @@ def configure_logging(verbosity: int = 2):
         import_log_level = logging.INFO
 
     logging.basicConfig(
-        level=scraper_log_level,
+        datefmt="%H:%M:%S",
         format="[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
-        datefmt="%H:%M:%S"
+        level=scraper_log_level,
+        handlers=[
+            logging.FileHandler(filename),
+            logging.StreamHandler()
+        ]
+
     )
 
     # Disable "verbose" debug/info logging for imported modules.
     for module in ["asyncio", "selenium", "urllib3"]:
         module_logger = logging.getLogger(module)
         module_logger.setLevel(import_log_level)
+
+    # Print to stdout in addition to logging to file.
 
 
 def pbs_cli():
@@ -116,6 +128,9 @@ def pbd_cli():
     actions.add_argument(
         "--board", "-b", nargs="?", type=int, default=0, const=None
     )
+    actions.add_argument(
+        "--thread", "-t", nargs="?", type=int, default=0, const=None
+    )
     args = vars(parser.parse_args())
 
     db = proboards_scraper.database.Database(args["database"])
@@ -124,7 +139,7 @@ def pbd_cli():
     value = None
 
     # Determine which action was selected (and its value, if any provided).
-    for _action in ("user", "board"):
+    for _action in ("board", "user", "thread"):
         if args[_action] != 0:
             action = _action
             value = args[_action]
@@ -166,5 +181,8 @@ def pbd_cli():
                 sub = [sub["id"] for sub in board["sub_boards"]]
                 board["sub_boards"] = sub
             pprint(board)
+    elif action == "thread":
+        result = db.query_threads(thread_id=value)
+        # TODO
     else:
         raise ValueError("Invalid action")
