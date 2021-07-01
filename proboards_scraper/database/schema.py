@@ -102,6 +102,7 @@ class Moderator(Base):
     """
     This table links a user to a board they moderate. A given moderation
     relationship (i.e., board + user combination) must be unique.
+
     Attributes:
         board_id (int): Board from ``board`` table.
         user_id (int): User from ``user`` table.
@@ -117,6 +118,57 @@ class Moderator(Base):
     )
 
     _users = relationship("User")
+
+
+class Poll(Base):
+    """
+    Attributes:
+        id (int): The thread id to which this poll belongs.
+        name (str): Poll name, i.e., the poll question.
+        options: The options associated with this poll.
+        users: Users who have voted in this poll.
+    """
+    __tablename__ = "poll"
+
+    id = Column("id", Integer, ForeignKey("thread.id"), primary_key=True)
+    name = Column("name", String)
+
+    options = relationship("PollOption")
+    _voters = relationship("PollVoter")
+    voters = association_proxy("_voters", "_user")
+
+
+class PollOption(Base):
+    """
+    Attributes:
+        id (int): Poll option (answer) id obtained from scraping the site.
+        poll_id (int): Poll id (aka, thread id) to which this option belongs.
+        name (str): Option name.
+        votes (int): Number of votes this option received.
+    """
+    __tablename__ = "poll_option"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    poll_id = Column("poll_id", Integer, ForeignKey("poll.id"))
+    name = Column("name", String)
+    votes = Column("votes", Integer)
+
+
+class PollVoter(Base):
+    """
+    Attributes:
+    """
+    __tablename__ = "poll_voter"
+    __table_args__ = (UniqueConstraint("poll_id", "user_id"),)
+
+    poll_id = Column(
+        "poll_id", Integer, ForeignKey("poll.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _user = relationship("User")
 
 
 class Post(Base):

@@ -1,9 +1,14 @@
 import asyncio
+import logging
 import pathlib
 
 import aiohttp
+import selenium.webdriver
 
 from proboards_scraper.database import Database
+
+
+logger = logging.getLogger(__name__)
 
 
 class ScraperManager:
@@ -12,18 +17,27 @@ class ScraperManager:
         db: Database,
         client_session: aiohttp.ClientSession,
         content_queue: asyncio.Queue = None,
-        user_queue: asyncio.Queue = None,
-        image_dir: pathlib.Path = None
+        driver: selenium.webdriver.Chrome = None,
+        image_dir: pathlib.Path = None,
+        user_queue: asyncio.Queue = None
     ):
         """
         Args:
             db:
             client_session:
             content_queue:
+            driver:
+            image_dir:
             user_queue:
         """
         self.db = db
         self.client_session = client_session
+
+        if driver is None:
+            logger.warning(
+                "Polls cannot be scraped without setting a Chrome webdriver"
+            )
+        self.driver = driver
 
         if image_dir is None:
             image_dir = pathlib.Path("./images").expanduser().resolve()
@@ -64,6 +78,8 @@ class ScraperManager:
                     "category": self.db.insert_category,
                     "moderator": self.db.insert_moderator,
                     "poll": self.db.insert_poll,
+                    "poll_option": self.db.insert_poll_option,
+                    "poll_voter": self.db.insert_poll_voter,
                     "post": self.db.insert_post,
                     "thread": self.db.insert_thread,
                 }

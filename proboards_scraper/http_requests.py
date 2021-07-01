@@ -15,15 +15,23 @@ import selenium.webdriver
 logger = logging.getLogger(__name__)
 
 
+def get_chrome_driver():
+    chrome_opts = selenium.webdriver.ChromeOptions()
+    chrome_opts.headless = True
+    driver = selenium.webdriver.Chrome(options=chrome_opts)
+    return driver
+
+
 def get_login_cookies(
-    home_url: str, username: str, password: str, page_load_wait: int = 1
+    home_url: str, username: str, password: str,
+    driver: selenium.webdriver.Chrome = None, page_load_wait: int = 1
 ) -> dict:
     """
     TODO
     """
-    chrome_opts = selenium.webdriver.ChromeOptions()
-    chrome_opts.headless = True
-    driver = selenium.webdriver.Chrome(options=chrome_opts)
+    if driver is None:
+        driver = get_chrome_driver()
+
     driver.get(home_url)
     time.sleep(page_load_wait)
 
