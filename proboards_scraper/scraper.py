@@ -11,7 +11,8 @@ import aiohttp
 import bs4
 
 from .http_requests import (
-    download_image, get_login_cookies, get_login_session, get_source
+    download_image, get_chrome_driver, get_login_cookies, get_login_session,
+    get_source
 )
 from .scraper_manager import ScraperManager
 from proboards_scraper.database import Database
@@ -242,6 +243,57 @@ async def scrape_users(url: str, manager: ScraperManager):
     return users
 
 
+async def scrape_poll(
+    thread_id: int, poll_container: bs4.element.Tag,
+    voters_container: bs4.element.Tag, manager: ScraperManager
+):
+    poll_name = poll_container.find("h3").text
+
+    poll = {
+        "type": "poll",
+        "id": thread_id,
+        "name": poll_name,
+    }
+    await manager.content_queue.put(poll)
+
+    poll_results = poll_container.find("table", class_="results")
+    poll_options = poll_results.findAll("tr")
+
+    for poll_option_ in poll_options:
+        # Each poll option has a sitewide unique id that can be found in
+        # the <tr> elements class, e.g., <tr class="answer-123">, where
+        # 123 is the poll option (answer) id.
+        poll_option_id = int(poll_option_["class"][0].split("-")[1])
+
+        poll_option_answer = poll_option_.find("td", class_="answer")
+        poll_option_name = poll_option_answer.find("div").text.strip()
+
+        vote_info = poll_option_.find("td", class_="view-votes")
+        votes = int(vote_info.find("span", class_="votes").text)
+
+        poll_option = {
+            "type": "poll_option",
+            "id": poll_option_id,
+            "poll_id": thread_id,
+            "name": poll_option_name,
+            "votes": votes,
+        }
+        await manager.content_queue.put(poll_option)
+
+    # Get poll voters.
+    poll_voters = voters_container.findAll("div", class_="micro-profile")
+    for voter in poll_voters:
+        voter_anchor = voter.find("div", class_="info").find("a")
+        user_id = int(voter_anchor["data-id"])
+
+        poll_voter = {
+            "type": "poll_voter",
+            "poll_id": thread_id,
+            "user_id": user_id,
+        }
+        await manager.content_queue.put(poll_voter)
+
+
 async def scrape_thread(
     url: str,
     manager: ScraperManager,
@@ -250,10 +302,20 @@ async def scrape_thread(
     views: int = None,
     announcement: bool = False,
     locked: bool = False,
-    sticky: bool = False
+    sticky: bool = False,
+    poll: bool = False,
 ):
     """
-    TODO
+    Args:
+        url:
+        manager:
+        board_id:
+        user_id:
+        views:
+        announcement:
+        locked:
+        sticky:
+        poll:
     """
     # Get thread id from URL.
     expr = r"(.*)/thread/(\d+)/.*"
@@ -261,11 +323,36 @@ async def scrape_thread(
     site_url = match.groups()[0]
     thread_id = int(match.groups()[1])
 
+    # Polls are loaded with the aid of JavaScript; if the thread contains
+    # a poll, we ust selenium/Chrome to get the source. However, the source
+    # obtained through selenium is different from the source obtained without
+    # it, so we must also obtain the source via aiohttp as usual to ensure
+    # that the rest of the elements can be scraped (e.g., the next page button
+    # has a different class when JS is enabled).
     source = await get_source(url, manager.client_session)
+
+    if poll:
+        manager.driver.get(url)
+        time.sleep(1)
+
+        # Click the "View Voters" button, which causes a modal to load.
+        manager.driver.find_element_by_link_text("View Voters").click()
+        time.sleep(1)
+
+        selenium_source = manager.driver.page_source
+        selenium_source = bs4.BeautifulSoup(selenium_source, "html.parser")
 
     post_container = source.find("div", class_="container posts")
     title_bar = post_container.find("div", class_="title-bar")
     thread_title = title_bar.find("h1").text
+
+    if poll:
+        selenium_post_container = selenium_source.find(
+            "div", class_="container posts"
+        )
+        poll_container = selenium_post_container.find("div", class_="poll")
+        voters_container = selenium_source.find("div", {"id": "poll-voters"})
+        await scrape_poll(thread_id, poll_container, voters_container, manager)
 
     thread = {
         "type": "thread",
@@ -446,6 +533,7 @@ async def scrape_board(
                 announcement = "announcement" in thread_["class"]
                 sticky = "sticky" in thread_["class"]
                 locked = "locked" in thread_["class"]
+                poll = "poll" in thread_["class"]
 
                 views = int(thread_.find("td", class_="views").text)
 
@@ -480,6 +568,7 @@ async def scrape_board(
                     thread_url, manager, board_id=board_id,
                     user_id=create_user_id, views=views,
                     announcement=announcement, locked=locked, sticky=sticky,
+                    poll=poll
                 )
 
             # control-bar contains pagination/navigation buttons.
@@ -580,11 +669,13 @@ def scrape_site(
     db_path = dst_dir / "forum.db"
     db = Database(db_path)
 
+    chrome_driver = get_chrome_driver()
+
     # Get cookies for parts of the site requiring login authentication.
     url = url.rstrip("/")
     if username and password:
         logger.info(f"Logging in to {url}")
-        cookies = get_login_cookies(url, username, password)
+        cookies = get_login_cookies(url, username, password, chrome_driver)
 
         # Create a persistent aiohttp login session from the cookies.
         client_session = get_login_session(cookies)
@@ -597,7 +688,9 @@ def scrape_site(
 
     tasks = []
 
-    manager = ScraperManager(db, client_session, image_dir=image_dir)
+    manager = ScraperManager(
+        db, client_session, driver=chrome_driver, image_dir=image_dir
+    )
 
     if skip_users:
         manager.user_queue = None
