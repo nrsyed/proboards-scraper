@@ -132,6 +132,7 @@ class Poll(Base):
 
     id = Column("id", Integer, ForeignKey("thread.id"), primary_key=True)
     name = Column("name", String)
+
     options = relationship("PollOption")
     _voters = relationship("PollVoter")
     voters = association_proxy("_voters", "_user")

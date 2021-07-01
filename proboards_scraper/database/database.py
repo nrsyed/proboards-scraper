@@ -6,7 +6,8 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Avatar, Board, Category, Image, Moderator, Post, Thread, User,
+    Base, Avatar, Board, Category, Image, Moderator, Poll, PollOption,
+    PollVoter, Post, Thread, User
 )
 
 
@@ -130,8 +131,31 @@ class Database:
         )
         return moderator
 
-    def insert_poll(self):
-        raise NotImplementedError
+    def insert_poll(self, poll_: dict):
+        poll = Poll(**poll_)
+        inserted, poll = self.insert(poll)
+        self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
+        return poll
+
+    def insert_poll_option(self, poll_option_: dict):
+        poll_option = PollOption(**poll_option_)
+        inserted, poll_option = self.insert(poll_option)
+        self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
+        return poll_option
+
+    def insert_poll_voter(self, poll_voter_: dict):
+        poll_voter = PollVoter(**poll_voter_)
+        filters = {
+            "poll_id": poll_voter.poll_id,
+            "user_id": poll_voter.user_id,
+        }
+        inserted, poll_voter = self.insert(poll_voter, filters)
+        self._insert_log_msg(
+            f"Poll voter (thread {poll_voter.poll_id}, "
+            f"user {poll_voter.user_id})",
+            inserted
+        )
+        return poll_voter
 
     def insert_post(self, post_: dict):
         post = Post(**post_)
