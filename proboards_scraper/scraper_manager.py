@@ -78,6 +78,8 @@ class ScraperManager:
                     "category": self.db.insert_category,
                     "moderator": self.db.insert_moderator,
                     "poll": self.db.insert_poll,
+                    "poll_option": self.db.insert_poll_option,
+                    "poll_voter": self.db.insert_poll_voter,
                     "post": self.db.insert_post,
                     "thread": self.db.insert_thread,
                 }
