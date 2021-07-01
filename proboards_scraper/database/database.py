@@ -29,11 +29,14 @@ def serialize(obj):
         if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
         elif isinstance(obj, User):
-            avatar = serialize(obj.avatar[0])
-            dict_["avatar"] = {
-                "filename": avatar["filename"],
-                "url": avatar["url"],
-            }
+            avatar_ = None
+            if obj.avatar:
+                avatar = serialize(obj.avatar[0])
+                avatar_ = {
+                    "filename": avatar["filename"],
+                    "url": avatar["url"],
+                }
+            dict_["avatar"] = avatar_
 
         return dict_
     elif isinstance(obj, list):
@@ -228,6 +231,7 @@ class Database:
 
     def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
         """
+        TODO
         """
         result = self.session.query(Board)
 
@@ -241,3 +245,15 @@ class Database:
         else:
             result = result.all()
         return serialize(result)
+
+    def query_threads(self, thread_id: int = None) -> dict:
+        """
+        TODO
+        """
+        result = self.session.query(Thread)
+
+        if thread_id is not None:
+            result = result.filter_by(id=thread_id).first()
+            # TODO
+        else:
+            raise NotImplementedError
