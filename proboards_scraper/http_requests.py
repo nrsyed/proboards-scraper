@@ -148,7 +148,14 @@ async def download_image(
         },
     }
 
-    async with session.get(url) as response:
+    try:
+        response = await session.get(url, timeout=30)
+    except aiohttp.client_exceptions.ClientConnectorError as e:
+        logger.warning(
+            f"Failed to download image at {url}: {str(e)} "
+            "(it is likely the image or server no longer exists)"
+        )
+    else:
         ret["status"]["get"] = response.status
 
         if response.status == 200:
@@ -185,4 +192,5 @@ async def download_image(
                         await f.write(img)
                 else:
                     ret["status"]["exists"] = True
-    return ret
+    finally:
+        return ret

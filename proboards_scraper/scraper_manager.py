@@ -53,6 +53,9 @@ class ScraperManager:
         self.user_queue = user_queue
 
     async def run(self):
+        """
+        TODO
+        """
         if self.user_queue is not None:
             all_users_added = False
             while not all_users_added:

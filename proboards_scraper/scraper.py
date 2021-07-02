@@ -62,32 +62,6 @@ async def scrape_user(url: str, manager: ScraperManager):
     )
     user["name"] = name_and_group.find("span", class_="big_username").text
 
-    # Download avatar.
-    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
-    avatar_url = avatar_wrapper.find("img")["src"]
-
-    avatar_ret = await download_image(
-        avatar_url, manager.client_session, manager.image_dir
-    )
-
-    image = avatar_ret["image"]
-
-    # We need an image id to associate this image with a user as an avatar;
-    # thus, we must interact with the database directly to retrieve the
-    # image id (if it already exists in the database) or add then retrieve
-    # the id of the newly added image (if it doesn't already exist).
-    # NOTE: even if the image wasn't obtained successfully or is invalid, we
-    # still store an Image in the database that contains the original avatar
-    # URL (and an Avatar linking that Image to the current user).
-    image_db_obj = manager.db.insert_image(image)
-    image_id = image_db_obj.id
-
-    avatar = {
-        "user_id": user["id"],
-        "image_id": image_id,
-    }
-    manager.db.insert_avatar(avatar)
-
     # The group name is contained between two <br> tags and is the element's
     # fourth child.
     children = [child for child in name_and_group.children]
@@ -203,6 +177,34 @@ async def scrape_user(url: str, manager: ScraperManager):
             user["instant_messengers"] = messenger_str
 
     await manager.user_queue.put(user)
+
+    # Get avatar image URL. We wait until after adding the user so to ensure
+    # that the user is added even if an error is encountered in downloading
+    # their avatar.
+    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
+    avatar_url = avatar_wrapper.find("img")["src"]
+
+    avatar_ret = await download_image(
+        avatar_url, manager.client_session, manager.image_dir
+    )
+
+    image = avatar_ret["image"]
+
+    # We need an image id to associate this image with a user as an avatar;
+    # thus, we must interact with the database directly to retrieve the
+    # image id (if it already exists in the database) or add then retrieve
+    # the id of the newly added image (if it doesn't already exist).
+    # NOTE: even if the image wasn't obtained successfully or is invalid, we
+    # still store an Image in the database that contains the original avatar
+    # URL (and an Avatar linking that Image to the current user).
+    image_db_obj = manager.db.insert_image(image)
+    image_id = image_db_obj.id
+
+    avatar = {
+        "user_id": user["id"],
+        "image_id": image_id,
+    }
+    manager.db.insert_avatar(avatar)
     logger.debug(f"Got user profile info for user {user['name']}")
     return user
 
