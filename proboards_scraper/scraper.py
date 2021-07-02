@@ -249,7 +249,7 @@ async def scrape_poll(
     thread_id: int, poll_container: bs4.element.Tag,
     voters_container: bs4.element.Tag, manager: ScraperManager
 ):
-    poll_name = poll_container.find("h3").text
+    poll_name = poll_container.find("h3").text.strip()
 
     poll = {
         "type": "poll",
