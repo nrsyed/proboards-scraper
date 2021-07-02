@@ -183,6 +183,17 @@ def pbd_cli():
             pprint(board)
     elif action == "thread":
         result = db.query_threads(thread_id=value)
-        # TODO
+        thread = result
+        if thread is not None and "poll" in thread:
+            breakpoint()
+            poll_options = [
+                {"name": opt["name"], "votes": opt["votes"]}
+                for opt in thread["poll"]["options"]
+            ]
+            thread["poll"]["options"] = poll_options
+
+            poll_voters = [user["name"] for user in thread["poll"]["voters"]]
+            thread["poll"]["voters"] = poll_voters
+        pprint(thread)
     else:
         raise ValueError("Invalid action")

@@ -18,7 +18,13 @@ def serialize(obj):
     """
     TODO
     """
-    if isinstance(obj, (Board, Category, Image, Post, Thread, User)):
+    if isinstance(
+        obj,
+        (
+            Board, Category, Image, Poll, PollOption, PollVoter, Post, Thread,
+            User
+        )
+    ):
         dict_ = {}
         for k, v in vars(obj).items():
             if not k.startswith("_"):
@@ -28,6 +34,11 @@ def serialize(obj):
         # objects are not in Board.__dict__ and must be separately serialized.
         if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
+        elif isinstance(obj, Poll):
+            dict_["options"] = serialize(list(obj.options))
+            dict_["voters"] = serialize(list(obj.voters))
+        elif isinstance(obj, Thread):
+            dict_["posts"] = serialize(list(obj.posts))
         elif isinstance(obj, User):
             avatar_ = None
             if obj.avatar:
@@ -254,6 +265,18 @@ class Database:
 
         if thread_id is not None:
             result = result.filter_by(id=thread_id).first()
-            # TODO
+            thread = serialize(result)
+
+            if result is not None:
+                poll_query = self.session.query(Poll).filter_by(id=thread_id)
+                poll_result = poll_query.first()
+                if poll_result is not None:
+                    poll = serialize(poll_result)
+                    thread["poll"] = poll
+            return thread
         else:
-            raise NotImplementedError
+            threads = serialize(result.all())
+            threads = [
+                f"{thread['id']}: {thread['title']}" for thread in threads
+            ]
+            return threads
