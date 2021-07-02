@@ -7,7 +7,7 @@ import sqlalchemy.orm
 
 from .schema import (
     Base, Avatar, Board, Category, Image, Moderator, Poll, PollOption,
-    PollVoter, Post, Thread, User
+    PollVoter, Post, ShoutboxPost, Thread, User
 )
 
 
@@ -102,6 +102,8 @@ class Database:
             self.session.add(obj)
             self.session.commit()
             inserted = True
+        else:
+            obj = result
         return inserted, obj
 
     def insert_avatar(self, avatar_: dict):
@@ -128,7 +130,8 @@ class Database:
 
     def insert_image(self, image_: dict):
         image = Image(**image_)
-        inserted, image = self.insert(image)
+        filters = {"md5_hash": image.md5_hash}
+        inserted, image = self.insert(image, filters)
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
 
@@ -176,6 +179,12 @@ class Database:
         inserted, post = self.insert(post)
         self._insert_log_msg(f"Post {post.id}", inserted)
         return post
+
+    def insert_shoutbox_post(self, shoutbox_post_: dict):
+        shoutbox_post = ShoutboxPost(**shoutbox_post_)
+        inserted, shoutbox_post = self.insert(shoutbox_post)
+        self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
+        return shoutbox_post
 
     def insert_thread(self, thread_: dict):
         thread = Thread(**thread_)

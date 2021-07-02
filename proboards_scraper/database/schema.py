@@ -84,6 +84,7 @@ class Image(Base):
 
     Attributes:
         id (int): Autoincrementing primary key.
+        description (str): Optional description of this image.
         filename (str): Filename of the downloaded file on disk.
         md5_hash (str): MD5 hash of the downloaded file.
         size (int): Size, in bytes, of the downloaded file.
@@ -92,6 +93,7 @@ class Image(Base):
     __tablename__ = "image"
 
     id = Column("id", Integer, primary_key=True)
+    description = Column("description", String)
     filename = Column("filename", String)
     md5_hash = Column("md5_hash", String)
     size = Column("size", Integer)
@@ -198,6 +200,24 @@ class Post(Base):
     user_id = Column(
         "user_id", ForeignKey("user.id"), nullable=False
     )
+
+
+class ShoutboxPost(Base):
+    """
+    Table for shoutbox posts.
+
+    Attributes:
+        id (int): Autoincrementing primary key.
+        date (str): When the post was made (Unix timestamp).
+        message (str): Post content/message.
+        user_id (int): User who made the post.
+    """
+    __tablename__ = "shoutbox_post"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    date = Column("date", String)
+    message = Column("message", String)
+    user_id = Column("user_id", Integer, ForeignKey("user.id"))
 
 
 class Thread(Base):

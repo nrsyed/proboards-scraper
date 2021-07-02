@@ -84,6 +84,7 @@ class ScraperManager:
                     "poll_option": self.db.insert_poll_option,
                     "poll_voter": self.db.insert_poll_voter,
                     "post": self.db.insert_post,
+                    "shoutbox_post": self.db.insert_shoutbox_post,
                     "thread": self.db.insert_thread,
                 }
 

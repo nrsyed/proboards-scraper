@@ -189,6 +189,7 @@ async def scrape_user(url: str, manager: ScraperManager):
     )
 
     image = avatar_ret["image"]
+    image["description"] = "avatar"
 
     # We need an image id to associate this image with a user as an avatar;
     # thus, we must interact with the database directly to retrieve the
@@ -537,6 +538,7 @@ async def scrape_board(
                 locked = "locked" in thread_["class"]
                 poll = "poll" in thread_["class"]
 
+                # TODO: commas
                 views = int(thread_.find("td", class_="views").text)
 
                 created_by_tag = thread_.find("td", class_="created-by")
@@ -591,6 +593,33 @@ async def scrape_board(
                 )
 
 
+async def scrape_shoutbox(
+    shoutbox_container: bs4.element.Tag, manager: ScraperManager
+):
+    shoutbox_posts = shoutbox_container.findAll("div", class_="shoutbox-post")
+
+    post_id_expr = r"shoutbox-post-(\d+)"
+
+    for post in shoutbox_posts:
+        post_id = None
+        for class_ in post["class"]:
+            if match := re.match(post_id_expr, class_):
+                post_id = match.groups()[0]
+
+        timestamp = post.find("abbr", class_="time")["data-timestamp"]
+        message = post.find("span", class_="message").text
+        user_id = int(post.find("a", class_="user-link")["data-id"])
+
+        shoutbox_post = {
+            "type": "shoutbox_post",
+            "id": post_id,
+            "date": timestamp,
+            "message": message,
+            "user_id": user_id,
+        }
+        await manager.content_queue.put(shoutbox_post)
+
+
 async def scrape_content(url: str, manager: ScraperManager):
     """
     Scrape all categories/boards from the main page.
@@ -599,8 +628,11 @@ async def scrape_content(url: str, manager: ScraperManager):
         url: Homepage URL.
     """
     source = await get_source(url, manager.client_session)
-    categories = source.findAll("div", class_="container boards")
 
+    shoutbox_container = source.find("div", class_="shoutbox_container")
+    await scrape_shoutbox(shoutbox_container, manager)
+
+    categories = source.findAll("div", class_="container boards")
     for category_ in categories:
         # The category id is found among the tag's previous siblings and looks
         # like <a name="category-2"></a>. We want the number in the name attr.
