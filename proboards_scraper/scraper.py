@@ -538,8 +538,8 @@ async def scrape_board(
                 locked = "locked" in thread_["class"]
                 poll = "poll" in thread_["class"]
 
-                # TODO: commas
-                views = int(thread_.find("td", class_="views").text)
+                views_text = thread_.find("td", class_="views").text
+                views = int(views_text.replace(",", ""))
 
                 created_by_tag = thread_.find("td", class_="created-by")
 
