@@ -79,6 +79,7 @@ class ScraperManager:
                 type_to_insert_func = {
                     "board": self.db.insert_board,
                     "category": self.db.insert_category,
+                    "image": self.db.insert_image,
                     "moderator": self.db.insert_moderator,
                     "poll": self.db.insert_poll,
                     "poll_option": self.db.insert_poll_option,

@@ -620,6 +620,27 @@ async def scrape_shoutbox(
         await manager.content_queue.put(shoutbox_post)
 
 
+async def scrape_smileys(
+    smiley_menu: bs4.element.Tag, manager: ScraperManager
+):
+    """
+    TODO
+    """
+    for smiley in smiley_menu.findAll("li"):
+        img_tag = smiley.find("img")
+        emoticon = img_tag["title"]
+        img_url = img_tag["src"]
+
+        smiley_ret = await download_image(
+            img_url, manager.client_session, manager.image_dir
+        )
+
+        image = smiley_ret["image"]
+        image["type"] = "image"
+        image["description"] = f"smiley {emoticon}"
+        await manager.content_queue.put(image)
+
+
 async def scrape_content(url: str, manager: ScraperManager):
     """
     Scrape all categories/boards from the main page.
@@ -627,7 +648,14 @@ async def scrape_content(url: str, manager: ScraperManager):
     Args:
         url: Homepage URL.
     """
-    source = await get_source(url, manager.client_session)
+    # Use selenium to get the page source because it will load the smileys
+    # in the shoutbox post area.
+    manager.driver.get(url)
+    time.sleep(1)
+    source = bs4.BeautifulSoup(manager.driver.page_source, "html.parser")
+
+    smiley_menu = source.find("ul", class_="smiley-menu")
+    await scrape_smileys(smiley_menu, manager)
 
     shoutbox_container = source.find("div", class_="shoutbox_container")
     await scrape_shoutbox(shoutbox_container, manager)
@@ -660,7 +688,7 @@ async def scrape_content(url: str, manager: ScraperManager):
             clickable = board_.find("td", class_="main clickable")
             link = clickable.find("span", class_="link").find("a")
             href = link["href"]
-            board_url = url + href
+            board_url = f"{url}{href}"
 
             # Get list of moderators, if any.
             mods_tag = clickable.find("p", class_="moderators")
