@@ -130,7 +130,16 @@ class Database:
 
     def insert_image(self, image_: dict):
         image = Image(**image_)
-        filters = {"md5_hash": image.md5_hash}
+
+        # To determine if the image already exists in the database, search by
+        # its md5 hash. If the image couldn't be downloaded (e.g., because its
+        # URL no longer exists), we will have no md5 hash information and
+        # should search by its URL instead.
+        if image.md5_hash is not None:
+            filters = {"md5_hash": image.md5_hash}
+        else:
+            filters = {"url": image.url}
+
         inserted, image = self.insert(image, filters)
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
