@@ -1,26 +1,25 @@
 # TODO: announcement thread (avoid visiting in every board)
-import argparse
 import asyncio
-import concurrent.futures
 import logging
 import os
 import pathlib
 import re
 import time
-from typing import Any, List, Tuple, Union
+from typing import List, Tuple
 
 import aiohttp
 import bs4
 
 from .http_requests import (
-    download_image, get_login_cookies, get_login_session, get_source
+    download_image, get_chrome_driver, get_login_cookies, get_login_session,
+    get_source
 )
 from .scraper_manager import ScraperManager
 from proboards_scraper.database import Database
 
 
 logger = logging.getLogger(__name__)
-        
+
 
 def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     member_hrefs = []
@@ -62,32 +61,6 @@ async def scrape_user(url: str, manager: ScraperManager):
         "div", class_="name_and_group float-right"
     )
     user["name"] = name_and_group.find("span", class_="big_username").text
-
-    # Download avatar.
-    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
-    avatar_url = avatar_wrapper.find("img")["src"]
-
-    avatar_ret = await download_image(
-        avatar_url, manager.client_session, manager.image_dir
-    )
-
-    image = avatar_ret["image"]
-    
-    # We need an image id to associate this image with a user as an avatar;
-    # thus, we must interact with the database directly to retrieve the
-    # image id (if it already exists in the database) or add then retrieve
-    # the id of the newly added image (if it doesn't already exist).
-    # NOTE: even if the image wasn't obtained successfully or is invalid, we
-    # still store an Image in the database that contains the original avatar
-    # URL (and an Avatar linking that Image to the current user).
-    image_db_obj = manager.db.insert_image(image)
-    image_id = image_db_obj.id
-
-    avatar = {
-        "user_id": user["id"],
-        "image_id": image_id,
-    }
-    manager.db.insert_avatar(avatar)
 
     # The group name is contained between two <br> tags and is the element's
     # fourth child.
@@ -204,6 +177,35 @@ async def scrape_user(url: str, manager: ScraperManager):
             user["instant_messengers"] = messenger_str
 
     await manager.user_queue.put(user)
+
+    # Get avatar image URL. We wait until after adding the user so to ensure
+    # that the user is added even if an error is encountered in downloading
+    # their avatar.
+    avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
+    avatar_url = avatar_wrapper.find("img")["src"]
+
+    avatar_ret = await download_image(
+        avatar_url, manager.client_session, manager.image_dir
+    )
+
+    image = avatar_ret["image"]
+    image["description"] = "avatar"
+
+    # We need an image id to associate this image with a user as an avatar;
+    # thus, we must interact with the database directly to retrieve the
+    # image id (if it already exists in the database) or add then retrieve
+    # the id of the newly added image (if it doesn't already exist).
+    # NOTE: even if the image wasn't obtained successfully or is invalid, we
+    # still store an Image in the database that contains the original avatar
+    # URL (and an Avatar linking that Image to the current user).
+    image_db_obj = manager.db.insert_image(image)
+    image_id = image_db_obj.id
+
+    avatar = {
+        "user_id": user["id"],
+        "image_id": image_id,
+    }
+    manager.db.insert_avatar(avatar)
     logger.debug(f"Got user profile info for user {user['name']}")
     return user
 
@@ -244,6 +246,57 @@ async def scrape_users(url: str, manager: ScraperManager):
     return users
 
 
+async def scrape_poll(
+    thread_id: int, poll_container: bs4.element.Tag,
+    voters_container: bs4.element.Tag, manager: ScraperManager
+):
+    poll_name = poll_container.find("h3").text.strip()
+
+    poll = {
+        "type": "poll",
+        "id": thread_id,
+        "name": poll_name,
+    }
+    await manager.content_queue.put(poll)
+
+    poll_results = poll_container.find("table", class_="results")
+    poll_options = poll_results.findAll("tr")
+
+    for poll_option_ in poll_options:
+        # Each poll option has a sitewide unique id that can be found in
+        # the <tr> elements class, e.g., <tr class="answer-123">, where
+        # 123 is the poll option (answer) id.
+        poll_option_id = int(poll_option_["class"][0].split("-")[1])
+
+        poll_option_answer = poll_option_.find("td", class_="answer")
+        poll_option_name = poll_option_answer.find("div").text.strip()
+
+        vote_info = poll_option_.find("td", class_="view-votes")
+        votes = int(vote_info.find("span", class_="votes").text)
+
+        poll_option = {
+            "type": "poll_option",
+            "id": poll_option_id,
+            "poll_id": thread_id,
+            "name": poll_option_name,
+            "votes": votes,
+        }
+        await manager.content_queue.put(poll_option)
+
+    # Get poll voters.
+    poll_voters = voters_container.findAll("div", class_="micro-profile")
+    for voter in poll_voters:
+        voter_anchor = voter.find("div", class_="info").find("a")
+        user_id = int(voter_anchor["data-id"])
+
+        poll_voter = {
+            "type": "poll_voter",
+            "poll_id": thread_id,
+            "user_id": user_id,
+        }
+        await manager.content_queue.put(poll_voter)
+
+
 async def scrape_thread(
     url: str,
     manager: ScraperManager,
@@ -252,10 +305,20 @@ async def scrape_thread(
     views: int = None,
     announcement: bool = False,
     locked: bool = False,
-    sticky: bool = False
+    sticky: bool = False,
+    poll: bool = False,
 ):
     """
-    TODO
+    Args:
+        url:
+        manager:
+        board_id:
+        user_id:
+        views:
+        announcement:
+        locked:
+        sticky:
+        poll:
     """
     # Get thread id from URL.
     expr = r"(.*)/thread/(\d+)/.*"
@@ -263,11 +326,36 @@ async def scrape_thread(
     site_url = match.groups()[0]
     thread_id = int(match.groups()[1])
 
+    # Polls are loaded with the aid of JavaScript; if the thread contains
+    # a poll, we ust selenium/Chrome to get the source. However, the source
+    # obtained through selenium is different from the source obtained without
+    # it, so we must also obtain the source via aiohttp as usual to ensure
+    # that the rest of the elements can be scraped (e.g., the next page button
+    # has a different class when JS is enabled).
     source = await get_source(url, manager.client_session)
+
+    if poll:
+        manager.driver.get(url)
+        time.sleep(1)
+
+        # Click the "View Voters" button, which causes a modal to load.
+        manager.driver.find_element_by_link_text("View Voters").click()
+        time.sleep(1)
+
+        selenium_source = manager.driver.page_source
+        selenium_source = bs4.BeautifulSoup(selenium_source, "html.parser")
 
     post_container = source.find("div", class_="container posts")
     title_bar = post_container.find("div", class_="title-bar")
     thread_title = title_bar.find("h1").text
+
+    if poll:
+        selenium_post_container = selenium_source.find(
+            "div", class_="container posts"
+        )
+        poll_container = selenium_post_container.find("div", class_="poll")
+        voters_container = selenium_source.find("div", {"id": "poll-voters"})
+        await scrape_poll(thread_id, poll_container, voters_container, manager)
 
     thread = {
         "type": "thread",
@@ -286,7 +374,7 @@ async def scrape_thread(
     pages_remaining = True
     while pages_remaining:
         posts = post_container.findAll("tr", class_="post")
-        
+
         for post_ in posts:
             # Each post <tr> tag has an id attribute of the form:
             # <tr id="post-1234">
@@ -305,7 +393,7 @@ async def scrape_thread(
 
                 # Get new guest user id.
                 guest_db_obj = manager.db.insert_guest(guest)
-                create_user_id = guest_db_obj.id
+                user_id = guest_db_obj.id
             else:
                 # <a> tag href attribute is of the form "/user/5".
                 user_link = left_panel.find("a", class_="user-link")
@@ -381,7 +469,7 @@ async def scrape_board(
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
-    
+
     description = None
     password_protected = None
     if (
@@ -394,7 +482,9 @@ async def scrape_board(
         password_protected = True
     else:
         board_name = stats_container.find("div", class_="board-name").text
-        description = stats_container.find("div", class_="board-description").text
+        description = stats_container.find(
+            "div", class_="board-description"
+        ).text
 
     board = {
         "type": "board",
@@ -446,8 +536,10 @@ async def scrape_board(
                 announcement = "announcement" in thread_["class"]
                 sticky = "sticky" in thread_["class"]
                 locked = "locked" in thread_["class"]
+                poll = "poll" in thread_["class"]
 
-                views = int(thread_.find("td", class_="views").text)
+                views_text = thread_.find("td", class_="views").text
+                views = int(views_text.replace(",", ""))
 
                 created_by_tag = thread_.find("td", class_="created-by")
 
@@ -480,6 +572,7 @@ async def scrape_board(
                     thread_url, manager, board_id=board_id,
                     user_id=create_user_id, views=views,
                     announcement=announcement, locked=locked, sticky=sticky,
+                    poll=poll
                 )
 
             # control-bar contains pagination/navigation buttons.
@@ -492,10 +585,60 @@ async def scrape_board(
                 next_page_href = next_btn.find("a")["href"]
                 next_page_url = site_url + next_page_href
                 logger.info(f"Getting source for {next_page_url}")
-                source = await get_source(next_page_url, manager.client_session)
+                source = await get_source(
+                    next_page_url, manager.client_session
+                )
                 thread_container = source.find(
                     "div", class_="container threads"
                 )
+
+
+async def scrape_shoutbox(
+    shoutbox_container: bs4.element.Tag, manager: ScraperManager
+):
+    shoutbox_posts = shoutbox_container.findAll("div", class_="shoutbox-post")
+
+    post_id_expr = r"shoutbox-post-(\d+)"
+
+    for post in shoutbox_posts:
+        post_id = None
+        for class_ in post["class"]:
+            if match := re.match(post_id_expr, class_):
+                post_id = match.groups()[0]
+
+        timestamp = post.find("abbr", class_="time")["data-timestamp"]
+        message = post.find("span", class_="message").text
+        user_id = int(post.find("a", class_="user-link")["data-id"])
+
+        shoutbox_post = {
+            "type": "shoutbox_post",
+            "id": post_id,
+            "date": timestamp,
+            "message": message,
+            "user_id": user_id,
+        }
+        await manager.content_queue.put(shoutbox_post)
+
+
+async def scrape_smileys(
+    smiley_menu: bs4.element.Tag, manager: ScraperManager
+):
+    """
+    TODO
+    """
+    for smiley in smiley_menu.findAll("li"):
+        img_tag = smiley.find("img")
+        emoticon = img_tag["title"]
+        img_url = img_tag["src"]
+
+        smiley_ret = await download_image(
+            img_url, manager.client_session, manager.image_dir
+        )
+
+        image = smiley_ret["image"]
+        image["type"] = "image"
+        image["description"] = f"smiley {emoticon}"
+        await manager.content_queue.put(image)
 
 
 async def scrape_content(url: str, manager: ScraperManager):
@@ -505,9 +648,19 @@ async def scrape_content(url: str, manager: ScraperManager):
     Args:
         url: Homepage URL.
     """
-    source = await get_source(url, manager.client_session)
-    categories = source.findAll("div", class_="container boards")
+    # Use selenium to get the page source because it will load the smileys
+    # in the shoutbox post area.
+    manager.driver.get(url)
+    time.sleep(1)
+    source = bs4.BeautifulSoup(manager.driver.page_source, "html.parser")
 
+    smiley_menu = source.find("ul", class_="smiley-menu")
+    await scrape_smileys(smiley_menu, manager)
+
+    shoutbox_container = source.find("div", class_="shoutbox_container")
+    await scrape_shoutbox(shoutbox_container, manager)
+
+    categories = source.findAll("div", class_="container boards")
     for category_ in categories:
         # The category id is found among the tag's previous siblings and looks
         # like <a name="category-2"></a>. We want the number in the name attr.
@@ -535,7 +688,7 @@ async def scrape_content(url: str, manager: ScraperManager):
             clickable = board_.find("td", class_="main clickable")
             link = clickable.find("span", class_="link").find("a")
             href = link["href"]
-            board_url = url + href
+            board_url = f"{url}{href}"
 
             # Get list of moderators, if any.
             mods_tag = clickable.find("p", class_="moderators")
@@ -578,11 +731,13 @@ def scrape_site(
     db_path = dst_dir / "forum.db"
     db = Database(db_path)
 
+    chrome_driver = get_chrome_driver()
+
     # Get cookies for parts of the site requiring login authentication.
     url = url.rstrip("/")
     if username and password:
         logger.info(f"Logging in to {url}")
-        cookies = get_login_cookies(url, username, password)
+        cookies = get_login_cookies(url, username, password, chrome_driver)
 
         # Create a persistent aiohttp login session from the cookies.
         client_session = get_login_session(cookies)
@@ -595,7 +750,9 @@ def scrape_site(
 
     tasks = []
 
-    manager = ScraperManager(db, client_session, image_dir=image_dir)
+    manager = ScraperManager(
+        db, client_session, driver=chrome_driver, image_dir=image_dir
+    )
 
     if skip_users:
         manager.user_queue = None

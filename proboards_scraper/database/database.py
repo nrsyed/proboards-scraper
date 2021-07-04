@@ -6,7 +6,8 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Avatar, Board, Category, Image, Moderator, Post, Thread, User,
+    Base, Avatar, Board, Category, Image, Moderator, Poll, PollOption,
+    PollVoter, Post, ShoutboxPost, Thread, User
 )
 
 
@@ -17,7 +18,13 @@ def serialize(obj):
     """
     TODO
     """
-    if isinstance(obj, (Board, Category, Image, Post, Thread, User)):
+    if isinstance(
+        obj,
+        (
+            Board, Category, Image, Poll, PollOption, PollVoter, Post, Thread,
+            User
+        )
+    ):
         dict_ = {}
         for k, v in vars(obj).items():
             if not k.startswith("_"):
@@ -27,12 +34,20 @@ def serialize(obj):
         # objects are not in Board.__dict__ and must be separately serialized.
         if isinstance(obj, Board):
             dict_["moderators"] = serialize(list(obj.moderators))
+        elif isinstance(obj, Poll):
+            dict_["options"] = serialize(list(obj.options))
+            dict_["voters"] = serialize(list(obj.voters))
+        elif isinstance(obj, Thread):
+            dict_["posts"] = serialize(list(obj.posts))
         elif isinstance(obj, User):
-            avatar = serialize(obj.avatar[0])
-            dict_["avatar"] = {
-                "filename": avatar["filename"],
-                "url": avatar["url"],
-            }
+            avatar_ = None
+            if obj.avatar:
+                avatar = serialize(obj.avatar[0])
+                avatar_ = {
+                    "filename": avatar["filename"],
+                    "url": avatar["url"],
+                }
+            dict_["avatar"] = avatar_
 
         return dict_
     elif isinstance(obj, list):
@@ -56,7 +71,6 @@ class Database:
         self.engine = engine
         self.session = session
 
-
     def _insert_log_msg(self, item_desc: str, inserted: bool):
         """
         Args:
@@ -67,7 +81,6 @@ class Database:
             logger.info(f"{item_desc} added to database")
         else:
             logger.info(f"{item_desc} already exists in database")
-
 
     def insert(
         self, obj: sqlalchemy.orm.DeclarativeMeta, filters: dict = None
@@ -84,24 +97,14 @@ class Database:
         Metaclass = type(obj)
         result = self.session.query(Metaclass).filter_by(**filters).first()
 
-        type_to_str = {
-            Avatar: "avatar",
-            Board: "board",
-            Category: "category",
-            Image: "image",
-            Moderator: "moderator",
-            Post: "post",
-            Thread: "thread",
-            User: "user",
-        }
-
         inserted = False
         if result is None:
             self.session.add(obj)
             self.session.commit()
             inserted = True
+        else:
+            obj = result
         return inserted, obj
-
 
     def insert_avatar(self, avatar_: dict):
         avatar = Avatar(**avatar_)
@@ -113,13 +116,11 @@ class Database:
         self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
         return avatar
 
-
     def insert_board(self, board_: dict):
         board = Board(**board_)
         inserted, board = self.insert(board)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
-
 
     def insert_category(self, category_: dict):
         category = Category(**category_)
@@ -127,13 +128,21 @@ class Database:
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
-
     def insert_image(self, image_: dict):
         image = Image(**image_)
-        inserted, image = self.insert(image)
+
+        # To determine if the image already exists in the database, search by
+        # its md5 hash. If the image couldn't be downloaded (e.g., because its
+        # URL no longer exists), we will have no md5 hash information and
+        # should search by its URL instead.
+        if image.md5_hash is not None:
+            filters = {"md5_hash": image.md5_hash}
+        else:
+            filters = {"url": image.url}
+
+        inserted, image = self.insert(image, filters)
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
-
 
     def insert_moderator(self, moderator_: dict):
         moderator = Moderator(**moderator_)
@@ -148,10 +157,31 @@ class Database:
         )
         return moderator
 
+    def insert_poll(self, poll_: dict):
+        poll = Poll(**poll_)
+        inserted, poll = self.insert(poll)
+        self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
+        return poll
 
-    def insert_poll(self):
-        raise NotImplementedError
+    def insert_poll_option(self, poll_option_: dict):
+        poll_option = PollOption(**poll_option_)
+        inserted, poll_option = self.insert(poll_option)
+        self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
+        return poll_option
 
+    def insert_poll_voter(self, poll_voter_: dict):
+        poll_voter = PollVoter(**poll_voter_)
+        filters = {
+            "poll_id": poll_voter.poll_id,
+            "user_id": poll_voter.user_id,
+        }
+        inserted, poll_voter = self.insert(poll_voter, filters)
+        self._insert_log_msg(
+            f"Poll voter (thread {poll_voter.poll_id}, "
+            f"user {poll_voter.user_id})",
+            inserted
+        )
+        return poll_voter
 
     def insert_post(self, post_: dict):
         post = Post(**post_)
@@ -159,20 +189,23 @@ class Database:
         self._insert_log_msg(f"Post {post.id}", inserted)
         return post
 
+    def insert_shoutbox_post(self, shoutbox_post_: dict):
+        shoutbox_post = ShoutboxPost(**shoutbox_post_)
+        inserted, shoutbox_post = self.insert(shoutbox_post)
+        self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
+        return shoutbox_post
 
     def insert_thread(self, thread_: dict):
         thread = Thread(**thread_)
         inserted, thread = self.insert(thread)
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
-        
 
     def insert_user(self, user_: dict):
         user = User(**user_)
         inserted, user = self.insert(user)
         self._insert_log_msg(f"User {user.name}", inserted)
         return user
-
 
     def insert_guest(self, guest_: dict):
         """
@@ -212,7 +245,6 @@ class Database:
         self._insert_log_msg(f"Guest {guest.name}", inserted)
         return guest
 
-
     def query_users(self, user_id: int = None) -> Union[List[dict], dict]:
         """
         Return a list of all users if no ``user_num`` provided, or a specific
@@ -226,9 +258,9 @@ class Database:
             result = result.all()
         return serialize(result)
 
-
     def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
         """
+        TODO
         """
         result = self.session.query(Board)
 
@@ -242,3 +274,27 @@ class Database:
         else:
             result = result.all()
         return serialize(result)
+
+    def query_threads(self, thread_id: int = None) -> dict:
+        """
+        TODO
+        """
+        result = self.session.query(Thread)
+
+        if thread_id is not None:
+            result = result.filter_by(id=thread_id).first()
+            thread = serialize(result)
+
+            if result is not None:
+                poll_query = self.session.query(Poll).filter_by(id=thread_id)
+                poll_result = poll_query.first()
+                if poll_result is not None:
+                    poll = serialize(poll_result)
+                    thread["poll"] = poll
+            return thread
+        else:
+            threads = serialize(result.all())
+            threads = [
+                f"{thread['id']}: {thread['title']}" for thread in threads
+            ]
+            return threads

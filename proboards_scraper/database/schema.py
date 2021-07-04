@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Boolean, Column, Integer, ForeignKey, String, Text, UniqueConstraint
+    Boolean, Column, Integer, ForeignKey, String, UniqueConstraint
 )
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declarative_base
@@ -36,7 +36,7 @@ class Board(Base):
         name (str): Board name (required).
         parent_id (int): Parent board primary key (if a sub-board).
         password_protected (bool):
-        url (str): 
+        url (str):
 
 
         sub_boards: This board's sub-boards.
@@ -84,6 +84,7 @@ class Image(Base):
 
     Attributes:
         id (int): Autoincrementing primary key.
+        description (str): Optional description of this image.
         filename (str): Filename of the downloaded file on disk.
         md5_hash (str): MD5 hash of the downloaded file.
         size (int): Size, in bytes, of the downloaded file.
@@ -92,6 +93,7 @@ class Image(Base):
     __tablename__ = "image"
 
     id = Column("id", Integer, primary_key=True)
+    description = Column("description", String)
     filename = Column("filename", String)
     md5_hash = Column("md5_hash", String)
     size = Column("size", Integer)
@@ -102,6 +104,7 @@ class Moderator(Base):
     """
     This table links a user to a board they moderate. A given moderation
     relationship (i.e., board + user combination) must be unique.
+
     Attributes:
         board_id (int): Board from ``board`` table.
         user_id (int): User from ``user`` table.
@@ -117,6 +120,57 @@ class Moderator(Base):
     )
 
     _users = relationship("User")
+
+
+class Poll(Base):
+    """
+    Attributes:
+        id (int): The thread id to which this poll belongs.
+        name (str): Poll name, i.e., the poll question.
+        options: The options associated with this poll.
+        users: Users who have voted in this poll.
+    """
+    __tablename__ = "poll"
+
+    id = Column("id", Integer, ForeignKey("thread.id"), primary_key=True)
+    name = Column("name", String)
+
+    options = relationship("PollOption")
+    _voters = relationship("PollVoter")
+    voters = association_proxy("_voters", "_user")
+
+
+class PollOption(Base):
+    """
+    Attributes:
+        id (int): Poll option (answer) id obtained from scraping the site.
+        poll_id (int): Poll id (aka, thread id) to which this option belongs.
+        name (str): Option name.
+        votes (int): Number of votes this option received.
+    """
+    __tablename__ = "poll_option"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    poll_id = Column("poll_id", Integer, ForeignKey("poll.id"))
+    name = Column("name", String)
+    votes = Column("votes", Integer)
+
+
+class PollVoter(Base):
+    """
+    Attributes:
+    """
+    __tablename__ = "poll_voter"
+    __table_args__ = (UniqueConstraint("poll_id", "user_id"),)
+
+    poll_id = Column(
+        "poll_id", Integer, ForeignKey("poll.id"), primary_key=True
+    )
+    user_id = Column(
+        "user_id", Integer, ForeignKey("user.id"), primary_key=True
+    )
+
+    _user = relationship("User")
 
 
 class Post(Base):
@@ -146,6 +200,24 @@ class Post(Base):
     user_id = Column(
         "user_id", ForeignKey("user.id"), nullable=False
     )
+
+
+class ShoutboxPost(Base):
+    """
+    Table for shoutbox posts.
+
+    Attributes:
+        id (int): Autoincrementing primary key.
+        date (str): When the post was made (Unix timestamp).
+        message (str): Post content/message.
+        user_id (int): User who made the post.
+    """
+    __tablename__ = "shoutbox_post"
+
+    id = Column("id", Integer, primary_key=True, autoincrement=False)
+    date = Column("date", String)
+    message = Column("message", String)
+    user_id = Column("user_id", Integer, ForeignKey("user.id"))
 
 
 class Thread(Base):
@@ -245,11 +317,3 @@ class User(Base):
 
     _avatar = relationship("Avatar")
     avatar = association_proxy("_avatar", "_image")
-
-
-#class Poll(Base):
-#    """
-#    Attributes:
-#        id (int):
-#    """
-#    __tablename__ = "poll"

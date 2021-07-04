@@ -1,14 +1,12 @@
-import aiofiles
-import asyncio
 import hashlib
 import http
 import imghdr
 import logging
-import os
 import pathlib
 import time
 from typing import List
 
+import aiofiles
 import aiohttp
 import bs4
 import selenium.webdriver
@@ -16,16 +14,26 @@ import selenium.webdriver
 
 logger = logging.getLogger(__name__)
 
+GET_REQUEST_DELAY = 0.5
+
+
+def get_chrome_driver():
+    chrome_opts = selenium.webdriver.ChromeOptions()
+    chrome_opts.headless = True
+    driver = selenium.webdriver.Chrome(options=chrome_opts)
+    return driver
+
 
 def get_login_cookies(
-    home_url: str, username: str, password: str, page_load_wait: int = 1
+    home_url: str, username: str, password: str,
+    driver: selenium.webdriver.Chrome = None, page_load_wait: int = 1
 ) -> dict:
     """
     TODO
     """
-    chrome_opts = selenium.webdriver.ChromeOptions()
-    chrome_opts.headless = True
-    driver = selenium.webdriver.Chrome(options=chrome_opts)
+    if driver is None:
+        driver = get_chrome_driver()
+
     driver.get(home_url)
     time.sleep(page_load_wait)
 
@@ -56,8 +64,7 @@ def get_login_cookies(
                 password_input = input_
             elif input_name == "continue":
                 submit_input = input_
-        except:
-            # TODO
+        except Exception:
             pass
 
     email_input.send_keys(username)
@@ -88,8 +95,8 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
 
         # NOTE: ignore expires field; if it's absent, the cookie remains
         # valid for the duration of the session.
-        #if "expiry" in cookie:
-        #    morsel["expires"] = cookie["expiry"]
+        # if "expiry" in cookie:
+        #     morsel["expires"] = cookie["expiry"]
 
         morsels[cookie["name"]] = morsel
 
@@ -107,6 +114,7 @@ async def get_source(
     """
     logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
+    time.sleep(GET_REQUEST_DELAY)
     resp = await session.get(url)
     text = await resp.text()
     return bs4.BeautifulSoup(text, "html.parser")
@@ -140,7 +148,14 @@ async def download_image(
         },
     }
 
-    async with session.get(url) as response:
+    try:
+        response = await session.get(url, timeout=30)
+    except aiohttp.client_exceptions.ClientConnectorError as e:
+        logger.warning(
+            f"Failed to download image at {url}: {str(e)} "
+            "(it is likely the image or server no longer exists)"
+        )
+    else:
         ret["status"]["get"] = response.status
 
         if response.status == 200:
@@ -177,4 +192,5 @@ async def download_image(
                         await f.write(img)
                 else:
                     ret["status"]["exists"] = True
-    return ret
+    finally:
+        return ret
