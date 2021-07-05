@@ -14,8 +14,6 @@ import selenium.webdriver
 
 logger = logging.getLogger(__name__)
 
-GET_REQUEST_DELAY = 0.5
-
 
 def get_chrome_driver():
     chrome_opts = selenium.webdriver.ChromeOptions()
@@ -114,7 +112,6 @@ async def get_source(
     """
     logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
-    time.sleep(GET_REQUEST_DELAY)
     resp = await session.get(url)
     text = await resp.text()
     return bs4.BeautifulSoup(text, "html.parser")

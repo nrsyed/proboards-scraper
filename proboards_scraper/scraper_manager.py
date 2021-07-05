@@ -1,11 +1,13 @@
 import asyncio
 import logging
 import pathlib
+import time
 
 import aiohttp
 import selenium.webdriver
 
 from proboards_scraper.database import Database
+from .http_requests import get_source, download_image
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,10 @@ class ScraperManager:
         content_queue: asyncio.Queue = None,
         driver: selenium.webdriver.Chrome = None,
         image_dir: pathlib.Path = None,
-        user_queue: asyncio.Queue = None
+        user_queue: asyncio.Queue = None,
+        request_threshold: int = 20,
+        short_delay_time: float = 1.0,
+        long_delay_time: float = 15.0
     ):
         """
         Args:
@@ -29,6 +34,14 @@ class ScraperManager:
             driver:
             image_dir:
             user_queue:
+            request_threshold: After every ``request_threshold`` calls to
+                :meth:`ScraperManager.get_source`, wait ``long_delay_time``
+                seconds before continuing. This is to prevent request
+                throttling due to a large number of consecutive requests.
+            short_delay_time: Number of seconds to wait after each call to
+                :meth:`ScraperManager.get_source` (to help prevent request
+                throttling).
+            long_delay_time: See ``request_threshold``.
         """
         self.db = db
         self.client_session = client_session
@@ -51,6 +64,59 @@ class ScraperManager:
         if user_queue is None:
             user_queue = asyncio.Queue()
         self.user_queue = user_queue
+
+        # TODO: include selenium webdriver in request count?
+        self.request_threshold = request_threshold
+        self.short_delay_time = short_delay_time
+        self.long_delay_time = long_delay_time
+        self.request_count = 0
+
+    def _delay(self):
+        delay = self.short_delay_time
+
+        mod = self.request_threshold - 1
+        if self.request_count % self.request_threshold == mod:
+            delay = self.long_delay_time
+            logger.debug(
+                f"Request count = {self.request_count + 1}, sleeping {delay} s"
+            )
+        time.sleep(delay)
+
+    async def download_image(self, url):
+        """
+        TODO
+        """
+        if "proboards.com" in url:
+            self._delay()
+            self.request_count += 1
+        return await download_image(url, self.client_session, self.image_dir)
+
+    async def get_source(self, url):
+        """
+        Wrapper around :func:`proboards_scraper.scraper.get_source` with an
+        added short delay via call to :func:`time.sleep` before each
+        request, and a longer delay after every ``self.request_threshold``
+        calls to :meth:`ScraperManager.get_source`. This rate-limiting is
+        performed to help avoid request throttling by the server, which may
+        result from a large number of requests in a short period of time.
+        """
+        self._delay()
+        self.request_count += 1
+        return await get_source(url, self.client_session)
+
+    def insert_guest(self, name):
+        """
+        TODO
+        """
+        guest = {
+            "id": -1,
+            "name": name,
+        }
+
+        # Get guest user id.
+        guest_db_obj = self.db.insert_guest(guest)
+        guest_id = guest_db_obj.id
+        return guest_id
 
     async def run(self):
         """
@@ -93,3 +159,4 @@ class ScraperManager:
                 insert_func(content)
 
         await self.client_session.close()
+        self.driver.quit()
