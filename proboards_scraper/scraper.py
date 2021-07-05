@@ -551,9 +551,6 @@ async def scrape_board(url: str,manager: ScraperManager):
 
             await scrape_board(subboard_url, manager)
 
-    # TODO
-    return
-
     # Iterate over all board pages and add threads on each page to queue.
     thread_container = source.find("div", class_="container threads")
 
