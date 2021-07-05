@@ -107,3 +107,4 @@ class ScraperManager:
                 insert_func(content)
 
         await self.client_session.close()
+        self.driver.quit()
