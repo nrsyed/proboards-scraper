@@ -152,7 +152,7 @@ class Database:
         }
         inserted, moderator = self.insert(moderator, filters)
         self._insert_log_msg(
-            f"Moderator {moderator.user_id}, board {moderator.board_id})",
+            f"Moderator ({moderator.user_id}, board {moderator.board_id})",
             inserted
         )
         return moderator
