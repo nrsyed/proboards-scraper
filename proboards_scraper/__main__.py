@@ -55,8 +55,6 @@ def configure_logging(verbosity: int = 2):
         module_logger = logging.getLogger(module)
         module_logger.setLevel(import_log_level)
 
-    # Print to stdout in addition to logging to file.
-
 
 def pbs_cli():
     """
@@ -64,7 +62,10 @@ def pbs_cli():
     """
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("url", type=str, help="Homepage URL")
+    parser.add_argument(
+        "url", type=str,
+        help="URL for either the main page, a board, a thread, or a user"
+    )
 
     login_group = parser.add_argument_group("Login arguments")
     login_group.add_argument(

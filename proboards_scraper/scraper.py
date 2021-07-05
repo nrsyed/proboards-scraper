@@ -1,11 +1,12 @@
 # TODO: announcement thread (avoid visiting in every board)
 import asyncio
+import json
 import logging
 import os
 import pathlib
 import re
 import time
-from typing import List, Tuple
+from typing import Callable, Literal, Tuple
 
 import aiohttp
 import bs4
@@ -21,24 +22,39 @@ from proboards_scraper.database import Database
 logger = logging.getLogger(__name__)
 
 
-def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
-    member_hrefs = []
-    next_href = None
+def int_(num: str) -> int:
+    """
+    Take an integer in the form of a string, remove any commas from it,
+    then return it as an ``int``.
+    """
+    return int(num.replace(",", ""))
 
-    members_container = source.find("div", class_="container members")
-    members_table_rows = members_container.find("tbody").findAll("tr")
-    for row in members_table_rows:
-        # NOTE: the href attribute is relative and must be appended to the
-        # site's base URL to construct the full user URL for a user.
-        href = row.find("a")["href"]
-        member_hrefs.append(href)
 
-    # Get the URL for the next page button if it's enabled.
-    next_ = source.find("li", {"class": "next"}).find("a")
-    if next_.has_attr("href"):
-        next_href = next_["href"]
+def split_url(url: str) -> Tuple[str, str]:
+    """
+    Take a forum page URL and return the base URL (e.g.,
+    `https://yoursite.proboards.com`) and resource path component (e.g.,
+    `board/3/boardname`).
 
-    return member_hrefs, next_href
+    Site/page URLs take the following forms:
+    Homepage: https://yoursite.proboards.com/
+    Board: https://yoursite.proboards.com/board/3/boardname
+    Thread: https://yoursite.proboards.com/thread/123/threadname
+    Users: https://yoursite.proboards.com/members
+    User: https://yoursite.proboards.com/user/10
+
+    Args:
+        url: URL to a forum page.
+
+    Returns:
+        The base URL and resource path URL component (or ``None`` if ``url``
+        is just the base/homepage URL).
+    """
+    url = url.rstrip("/")
+    expr = r"(^.*\.com)(/.*)?$"
+    match = re.match(expr, url)
+    base_url, path = match.groups()
+    return base_url, path
 
 
 async def scrape_user(url: str, manager: ScraperManager):
@@ -129,7 +145,7 @@ async def scrape_user(url: str, manager: ScraperManager):
             user["location"] = val.text
         elif heading == "Posts":
             # Remove commas from post count (eg, "1,500" to "1500").
-            user["post_count"] = int(val.text.replace(",", ""))
+            user["post_count"] = int_(val.text)
         elif heading == "Web Site":
             website_anchor = val.find("a")
             user["website_url"] = website_anchor.get("href")
@@ -198,6 +214,8 @@ async def scrape_user(url: str, manager: ScraperManager):
     # NOTE: even if the image wasn't obtained successfully or is invalid, we
     # still store an Image in the database that contains the original avatar
     # URL (and an Avatar linking that Image to the current user).
+
+    # TODO: make a dedicated method for this in the ScraperManager?
     image_db_obj = manager.db.insert_image(image)
     image_id = image_db_obj.id
 
@@ -207,30 +225,50 @@ async def scrape_user(url: str, manager: ScraperManager):
     }
     manager.db.insert_avatar(avatar)
     logger.debug(f"Got user profile info for user {user['name']}")
-    return user
+
+
+def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
+    # TODO: put this in `scrape_users`.
+    member_hrefs = []
+    next_href = None
+
+    members_container = source.find("div", class_="container members")
+    members_table_rows = members_container.find("tbody").findAll("tr")
+    for row in members_table_rows:
+        # NOTE: the href attribute is relative and must be appended to the
+        # site's base URL to construct the full user URL for a user.
+        href = row.find("a")["href"]
+        member_hrefs.append(href)
+
+    # Get the URL for the next page button if it's enabled.
+    next_ = source.find("li", {"class": "next"}).find("a")
+    if next_.has_attr("href"):
+        next_href = next_["href"]
+
+    return member_hrefs, next_href
 
 
 async def scrape_users(url: str, manager: ScraperManager):
     """
-    url: Site base URL.
+    url: Members page URL.
     manager:
     """
     logger.info(f"Getting user profile URLs from {url}")
 
-    members_page_url = f"{url}/members"
+    base_url, _ = split_url(url)
     member_hrefs = []
 
-    source = await get_source(members_page_url, manager.client_session)
+    source = await get_source(url, manager.client_session)
     _member_hrefs, next_href = scrape_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
-        next_url = f"{url}{next_href}"
+        next_url = f"{base_url}{next_href}"
         source = await get_source(next_url, manager.client_session)
         _member_hrefs, next_href = scrape_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
-    member_urls = [f"{url}{member_href}" for member_href in member_hrefs]
+    member_urls = [f"{base_url}{member_href}" for member_href in member_hrefs]
     logger.info(f"Found {len(member_urls)} user profile URLs")
 
     loop = asyncio.get_running_loop()
@@ -241,9 +279,6 @@ async def scrape_users(url: str, manager: ScraperManager):
         tasks.append(task)
 
     await asyncio.wait(tasks)
-    await manager.user_queue.put(None)
-    users = [task.result() for task in tasks]
-    return users
 
 
 async def scrape_poll(
@@ -297,34 +332,15 @@ async def scrape_poll(
         await manager.content_queue.put(poll_voter)
 
 
-async def scrape_thread(
-    url: str,
-    manager: ScraperManager,
-    board_id: int = None,
-    user_id: int = None,
-    views: int = None,
-    announcement: bool = False,
-    locked: bool = False,
-    sticky: bool = False,
-    poll: bool = False,
-):
+async def scrape_thread(url: str, manager: ScraperManager):
     """
     Args:
-        url:
+        url: Thread URL.
         manager:
-        board_id:
-        user_id:
-        views:
-        announcement:
-        locked:
-        sticky:
-        poll:
     """
     # Get thread id from URL.
-    expr = r"(.*)/thread/(\d+)/.*"
-    match = re.match(expr, url)
-    site_url = match.groups()[0]
-    thread_id = int(match.groups()[1])
+    base_url, url_path = split_url(url)
+    thread_id = int(url_path.split("/")[2])
 
     # Polls are loaded with the aid of JavaScript; if the thread contains
     # a poll, we ust selenium/Chrome to get the source. However, the source
@@ -333,6 +349,44 @@ async def scrape_thread(
     # that the rest of the elements can be scraped (e.g., the next page button
     # has a different class when JS is enabled).
     source = await get_source(url, manager.client_session)
+
+    # All thread metadata is contained in a particular <script> element in a
+    # somewhat convoluted manner. The method for extracting it is equally
+    # convoluted but implemented below with as much clarity as possible.
+    metadata_script = None
+
+    metadata_expr = '"thread":({.*?})'
+    script_tags = source.findAll("script")
+    for script_tag in script_tags:
+        script = str(script_tag.string)
+        if script.startswith("proboards.data("):
+            metadata_script = script
+            break
+    else:
+        logger.error(
+            f"Failed to find thread metadata script tag for {url}"
+        )
+
+    # Use the ``json`` module to get the metadata as a Python dict.
+    metadata_match = re.search(metadata_expr, metadata_script)
+    metadata_str = metadata_match.groups()[0]
+    metadata = json.loads(metadata_str)
+
+    announcement = metadata["is_announcement"] == 1
+    board_id = metadata["board_id"]
+    locked = metadata["is_locked"] == 1
+    poll = metadata["is_poll"] == 1
+    sticky = metadata["is_sticky"] == 1
+    user_id = metadata["created_by"]
+    views = int_(metadata["views"])
+
+    # If the create user id is 0, it means the user who created the thread
+    # is a guest. In this case, we jump ahead to the first post to grab the
+    # guest user name and get a database user id for the guest.
+    if user_id == 0:
+        first_post = source.select("tr.post.first")[0]
+        guest_user_name = first_post.find("span", class_="user-guest").text
+        user_id = manager.insert_guest(guest_user_name)
 
     if poll:
         manager.driver.get(url)
@@ -344,18 +398,16 @@ async def scrape_thread(
 
         selenium_source = manager.driver.page_source
         selenium_source = bs4.BeautifulSoup(selenium_source, "html.parser")
-
-    post_container = source.find("div", class_="container posts")
-    title_bar = post_container.find("div", class_="title-bar")
-    thread_title = title_bar.find("h1").text
-
-    if poll:
         selenium_post_container = selenium_source.find(
             "div", class_="container posts"
         )
         poll_container = selenium_post_container.find("div", class_="poll")
         voters_container = selenium_source.find("div", {"id": "poll-voters"})
         await scrape_poll(thread_id, poll_container, voters_container, manager)
+
+    post_container = source.find("div", class_="container posts")
+    title_bar = post_container.find("div", class_="title-bar")
+    thread_title = title_bar.find("h1").text
 
     thread = {
         "type": "thread",
@@ -376,9 +428,8 @@ async def scrape_thread(
         posts = post_container.findAll("tr", class_="post")
 
         for post_ in posts:
-            # Each post <tr> tag has an id attribute of the form:
-            # <tr id="post-1234">
-            # where 1234 would be the post id.
+            # Each post <tr> tag has an id attribute of the form
+            # <tr id="post-1234">, where 1234 is the post id.
             post_id = int(post_["id"].split("-")[1])
 
             # "left panel" contains info about the user who made the post.
@@ -386,14 +437,8 @@ async def scrape_thread(
 
             if guest_ := left_panel.find("span", class_="user-guest"):
                 guest_user_name = guest_.text
-                guest = {
-                    "id": -1,
-                    "name": guest_user_name,
-                }
-
-                # Get new guest user id.
-                guest_db_obj = manager.db.insert_guest(guest)
-                user_id = guest_db_obj.id
+                guest_id = manager.insert_guest(guest_user_name)
+                user_id = guest_id
             else:
                 # <a> tag href attribute is of the form "/user/5".
                 user_link = left_panel.find("a", class_="user-link")
@@ -426,7 +471,7 @@ async def scrape_thread(
                 "last_edited": last_edited,
                 "message": message,
                 "thread_id": thread_id,
-                "url": f"{site_url}/post/{post_id}",
+                "url": f"{base_url}/post/{post_id}",
                 "user_id": user_id,
             }
             await manager.content_queue.put(post)
@@ -439,36 +484,70 @@ async def scrape_thread(
                 pages_remaining = False
             else:
                 next_href = next_btn.find("a")["href"]
-                next_url = f"{site_url}{next_href}"
+                next_url = f"{base_url}{next_href}"
                 source = await get_source(next_url, manager.client_session)
                 post_container = source.find("div", class_="container posts")
 
 
-async def scrape_board(
-    url: str,
-    manager: ScraperManager,
-    category_id: int = None,
-    moderators: List[int] = None,
-    parent_id: int = None
-):
+async def scrape_board(url: str, manager: ScraperManager):
     """
     Args:
-        moderators: Optional list of moderator ids for the board (this is
-            available on the main page).
+        url: Board page URL.
     """
-    # Board URLs take the form
-    # https://{subdomain}.proboards.com/board/{id}/{name}
-    expr = r"(.*)/board/(\d+)/.*"
-    match = re.match(expr, url)
-
-    # We get the site_url to construct sub-board URLs (if any) later.
-    site_url = match.groups()[0]
-    board_id = int(match.groups()[1])
+    # Board URLs take the form:
+    # https://yoursite.proboards.com/board/{id}/{name}
+    base_url, url_path = split_url(url)
+    board_id = int(url_path.split("/")[2])
 
     source = await get_source(url, manager.client_session)
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
+
+    # Get category id and parent board id (if any, i.e., if this is a
+    # sub-board) from the navigation tree at the top of the page.
+    # The first nav-tree item contains no useful information. The second
+    # contains a link to the category. The last corresponds to the current
+    # board. If there are more than three items, the second-to-last contains
+    # the parent board.
+    nav_tree = source.find("ul", id="nav-tree").findAll("li")
+
+    # The category <li> tag contains an anchor tag with a href as follows:
+    # <a href="/#category-4">
+    # where, in this example, the category id is 4.
+    category_li = nav_tree[1]
+    category_href = category_li.find("a")["href"]
+    category_id = int(category_href.split("-")[1])
+
+    # The parent board <li> tag (if any) contains an anchor tag with a href as
+    # follows: <a href="/board/12/board-name">
+    # where, in this example, the parent board id is 12.
+    parent_id = None
+    if len(nav_tree) > 3:
+        parent_board_li = nav_tree[-2]
+        parent_board_href = parent_board_li.find("a")["href"]
+        parent_id = int(parent_board_href.split("/")[-2])
+
+    if source.find("a", id="moderators-link") is not None:
+        manager.driver.get(url)
+        time.sleep(1)
+        manager.driver.find_element_by_id("moderators-link").click()
+        time.sleep(1)
+
+        selenium_source = bs4.BeautifulSoup(
+            manager.driver.page_source, "html.parser"
+        )
+
+        micro_profiles = selenium_source.findAll("div", class_="micro-profile")
+        for micro_profile in micro_profiles:
+            user_id = int(micro_profile.find("a")["data-id"])
+
+            moderator = {
+                "type": "moderator",
+                "user_id": user_id,
+                "board_id": board_id,
+            }
+            await manager.content_queue.put(moderator)
 
     description = None
     password_protected = None
@@ -498,15 +577,6 @@ async def scrape_board(
     }
     await manager.content_queue.put(board)
 
-    if moderators:
-        for user_id in moderators:
-            moderator = {
-                "type": "moderator",
-                "user_id": user_id,
-                "board_id": board_id,
-            }
-            await manager.content_queue.put(moderator)
-
     # Add any sub-boards to the queue.
     subboard_container = source.find("div", class_="container boards")
     if subboard_container:
@@ -516,12 +586,9 @@ async def scrape_board(
             clickable = subboard.find("td", class_="main clickable")
             link = clickable.find("span", class_="link").find("a")
             href = link["href"]
-            subboard_url = site_url + href
+            subboard_url = base_url + href
 
-            await scrape_board(
-                subboard_url, manager, category_id=category_id,
-                parent_id=board_id
-            )
+            await scrape_board(subboard_url, manager)
 
     # Iterate over all board pages and add threads on each page to queue.
     thread_container = source.find("div", class_="container threads")
@@ -533,47 +600,12 @@ async def scrape_board(
             threads = thread_tbody.findAll("tr", class_="thread")
 
             for thread_ in threads:
-                announcement = "announcement" in thread_["class"]
-                sticky = "sticky" in thread_["class"]
-                locked = "locked" in thread_["class"]
-                poll = "poll" in thread_["class"]
-
-                views_text = thread_.find("td", class_="views").text
-                views = int(views_text.replace(",", ""))
-
-                created_by_tag = thread_.find("td", class_="created-by")
-
-                if guest_ := created_by_tag.find("span", class_="user-guest"):
-                    # This case occurs if the user is a guest or deleted user.
-                    # We assign the guest a user id of -1, add them to the
-                    # content queue (not user queue, which is intended for
-                    # registered users), and let :func:`add_to_database`
-                    # determine if this guest is already in the database (and
-                    # assign a new negative id if not).
-                    guest_user_name = guest_.text
-                    guest = {
-                        "id": -1,
-                        "name": guest_user_name,
-                    }
-
-                    # Get new guest user id.
-                    guest_db_obj = manager.db.insert_guest(guest)
-                    create_user_id = guest_db_obj.id
-                else:
-                    # The href attribute is of the form "/user/12".
-                    created_by_href = created_by_tag.find("a")["href"]
-                    create_user_id = int(created_by_href.split("/")[-1])
-
                 clickable = thread_.find("td", class_="main clickable")
                 anchor = clickable.find("span", class_="link target").find("a")
                 thread_href = anchor["href"]
-                thread_url = site_url + thread_href
-                await scrape_thread(
-                    thread_url, manager, board_id=board_id,
-                    user_id=create_user_id, views=views,
-                    announcement=announcement, locked=locked, sticky=sticky,
-                    poll=poll
-                )
+                thread_url = base_url + thread_href
+
+                await scrape_thread(thread_url, manager)
 
             # control-bar contains pagination/navigation buttons.
             control_bar = thread_container.find("ul", class_="ui-pagination")
@@ -583,7 +615,7 @@ async def scrape_board(
                 pages_remaining = False
             else:
                 next_page_href = next_btn.find("a")["href"]
-                next_page_url = site_url + next_page_href
+                next_page_url = base_url + next_page_href
                 logger.info(f"Getting source for {next_page_url}")
                 source = await get_source(
                     next_page_url, manager.client_session
@@ -641,9 +673,10 @@ async def scrape_smileys(
         await manager.content_queue.put(image)
 
 
-async def scrape_content(url: str, manager: ScraperManager):
+async def scrape_forum(url: str, manager: ScraperManager):
     """
-    Scrape all categories/boards from the main page.
+    Scrape the site beginning at the main page, including all categories,
+    boards, and the shoutbox.
 
     Args:
         url: Homepage URL.
@@ -676,7 +709,6 @@ async def scrape_content(url: str, manager: ScraperManager):
             "id": category_id,
             "name": category_name,
         }
-
         await manager.content_queue.put(category)
 
         boards = category_.findAll(
@@ -689,24 +721,34 @@ async def scrape_content(url: str, manager: ScraperManager):
             link = clickable.find("span", class_="link").find("a")
             href = link["href"]
             board_url = f"{url}{href}"
-
-            # Get list of moderators, if any.
-            mods_tag = clickable.find("p", class_="moderators")
-
-            moderator_ids = None
-            if mods_tag is not None:
-                moderator_ids = [
-                    int(a_tag["data-id"]) for a_tag in mods_tag.findAll("a")
-                ]
-
-            await scrape_board(
-                board_url, manager, category_id=category_id,
-                moderators=moderator_ids
-            )
-
-    await manager.content_queue.put(None)
+            await scrape_board(board_url, manager)
 
 
+async def _scrape_task_wrapper(
+    func: Callable,
+    queue_name: Literal["user", "content", "both"],
+    url: str,
+    manager: ScraperManager
+):
+    """
+    Args:
+        func: The async function to be called for scraping user(s) or content.
+        queue_name: The queue(s) in which ``None`` should be put after ``func``
+            completes, signaling to :meth:`ScraperManager.run` that that
+            queue's task is complete.
+        url: The URL to be passed to ``func``.
+        manager: The ``ScraperManager`` instance to be passed to ``func``.
+    """
+    await func(url, manager)
+
+    if queue_name == "both" or queue_name == "user":
+        await manager.user_queue.put(None)
+
+    if queue_name == "both" or queue_name == "content":
+        await manager.content_queue.put(None)
+
+
+# TODO: rename this function
 def scrape_site(
     url: str,
     dst_dir: pathlib.Path = "site",
@@ -733,11 +775,14 @@ def scrape_site(
 
     chrome_driver = get_chrome_driver()
 
+    base_url, url_path = split_url(url)
+
     # Get cookies for parts of the site requiring login authentication.
-    url = url.rstrip("/")
     if username and password:
-        logger.info(f"Logging in to {url}")
-        cookies = get_login_cookies(url, username, password, chrome_driver)
+        logger.info(f"Logging in to {base_url}")
+        cookies = get_login_cookies(
+            base_url, username, password, chrome_driver
+        )
 
         # Create a persistent aiohttp login session from the cookies.
         client_session = get_login_session(cookies)
@@ -748,21 +793,51 @@ def scrape_site(
         )
         client_session = aiohttp.ClientSession()
 
-    tasks = []
-
     manager = ScraperManager(
         db, client_session, driver=chrome_driver, image_dir=image_dir
     )
 
-    if skip_users:
-        manager.user_queue = None
-        logger.info("Skipping user profiles")
-    else:
-        users_task = scrape_users(url, manager)
-        tasks.append(users_task)
+    tasks = []
 
-    content_task = scrape_content(url, manager)
-    tasks.append(content_task)
+    users_task = None
+    content_task = None
+
+    if url_path is None:
+        # This represents the case where the forum homepage URL was provided,
+        # i.e., we scrape the entire site.
+        logger.info("Scraping entire forum")
+
+        content_task = _scrape_task_wrapper(
+            scrape_forum, "content", base_url, manager
+        )
+
+        if skip_users:
+            logger.info("Skipping user profiles")
+        else:
+            users_page_url = f"{base_url}/members"
+            users_task = _scrape_task_wrapper(
+                scrape_users, "user", users_page_url, manager
+            )
+    elif url_path.startswith("/members"):
+        users_task = _scrape_task_wrapper(scrape_users, "both", url, manager)
+    elif url_path.startswith("/user"):
+        users_task = _scrape_task_wrapper(scrape_user, "both", url, manager)
+    elif url_path.startswith("/board"):
+        content_task = _scrape_task_wrapper(
+            scrape_board, "content", url, manager
+        )
+    elif url_path.startswith("/thread"):
+        content_task = _scrape_task_wrapper(
+            scrape_thread, "content", url, manager
+        )
+
+    if users_task is not None:
+        tasks.append(users_task)
+    else:
+        manager.user_queue = None
+
+    if content_task is not None:
+        tasks.append(content_task)
 
     database_task = manager.run()
     tasks.append(database_task)
