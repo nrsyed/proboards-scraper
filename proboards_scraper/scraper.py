@@ -444,19 +444,13 @@ async def scrape_thread(
                 post_container = source.find("div", class_="container posts")
 
 
-async def scrape_board(
-    url: str,
-    manager: ScraperManager,
-    category_id: int = None,
-    moderators: List[int] = None,
-    parent_id: int = None
-):
+async def scrape_board(url: str,manager: ScraperManager):
     """
     Args:
         moderators: Optional list of moderator ids for the board (this is
             available on the main page).
     """
-    # Board URLs take the form
+    # Board URLs take the form:
     # https://{subdomain}.proboards.com/board/{id}/{name}
     expr = r"(.*)/board/(\d+)/.*"
     match = re.match(expr, url)
@@ -469,6 +463,52 @@ async def scrape_board(
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
+
+    # Get category id and parent board id (if any, i.e., if this is a
+    # sub-board) from the navigation tree at the top of the page.
+    # The first nav-tree item contains no useful information. The second
+    # contains a link to the category. The last corresponds to the current
+    # board. If there are more than three items, the second-to-last contains
+    # the parent board.
+    nav_tree = source.find("ul", id="nav-tree").findAll("li")
+
+    # The category <li> tag contains an anchor tag with a href as follows:
+    # <a href="/#category-4">
+    # where, in this example, the category id is 4.
+    category_li = nav_tree[1]
+    category_href = category_li.find("a")["href"]
+    category_id = int(category_href.split("-")[1])
+
+    # The parent board <li> tag (if any) contains an anchor tag with a href as
+    # follows: <a href="/board/12/board-name">
+    # where, in this example, the parent board id is 12.
+    parent_id = None
+    if len(nav_tree) > 3:
+        parent_board_li = nav_tree[-2]
+        parent_board_href = parent_board_li.find("a")["href"]
+        parent_id = int(parent_board_href.split("/")[-2])
+
+    moderators = None
+    if source.find("a", id="moderators-link") is not None:
+        manager.driver.get(url)
+        time.sleep(1)
+        manager.driver.find_element_by_id("moderators-link").click()
+        time.sleep(1)
+
+        selenium_source = bs4.BeautifulSoup(
+            manager.driver.page_source, "html.parser"
+        )
+
+        micro_profiles = selenium_source.findAll("div", class_="micro-profile")
+        for micro_profile in micro_profiles:
+            user_id = int(micro_profile.find("a")["data-id"])
+
+            moderator = {
+                "type": "moderator",
+                "user_id": user_id,
+                "board_id": board_id,
+            }
+            await manager.content_queue.put(moderator)
 
     description = None
     password_protected = None
@@ -498,15 +538,6 @@ async def scrape_board(
     }
     await manager.content_queue.put(board)
 
-    if moderators:
-        for user_id in moderators:
-            moderator = {
-                "type": "moderator",
-                "user_id": user_id,
-                "board_id": board_id,
-            }
-            await manager.content_queue.put(moderator)
-
     # Add any sub-boards to the queue.
     subboard_container = source.find("div", class_="container boards")
     if subboard_container:
@@ -518,10 +549,10 @@ async def scrape_board(
             href = link["href"]
             subboard_url = site_url + href
 
-            await scrape_board(
-                subboard_url, manager, category_id=category_id,
-                parent_id=board_id
-            )
+            await scrape_board(subboard_url, manager)
+
+    # TODO
+    return
 
     # Iterate over all board pages and add threads on each page to queue.
     thread_container = source.find("div", class_="container threads")
@@ -676,7 +707,6 @@ async def scrape_content(url: str, manager: ScraperManager):
             "id": category_id,
             "name": category_name,
         }
-
         await manager.content_queue.put(category)
 
         boards = category_.findAll(
@@ -689,20 +719,7 @@ async def scrape_content(url: str, manager: ScraperManager):
             link = clickable.find("span", class_="link").find("a")
             href = link["href"]
             board_url = f"{url}{href}"
-
-            # Get list of moderators, if any.
-            mods_tag = clickable.find("p", class_="moderators")
-
-            moderator_ids = None
-            if mods_tag is not None:
-                moderator_ids = [
-                    int(a_tag["data-id"]) for a_tag in mods_tag.findAll("a")
-                ]
-
-            await scrape_board(
-                board_url, manager, category_id=category_id,
-                moderators=moderator_ids
-            )
+            await scrape_board(board_url, manager)
 
     await manager.content_queue.put(None)
 
