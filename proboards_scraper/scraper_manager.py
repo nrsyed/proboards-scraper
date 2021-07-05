@@ -24,7 +24,7 @@ class ScraperManager:
         user_queue: asyncio.Queue = None,
         request_threshold: int = 20,
         short_delay_time: float = 1.0,
-        long_delay_time: float = 10.0
+        long_delay_time: float = 15.0
     ):
         """
         Args:
@@ -71,11 +71,24 @@ class ScraperManager:
         self.long_delay_time = long_delay_time
         self.request_count = 0
 
+    def _delay(self):
+        delay = self.short_delay_time
+
+        mod = self.request_threshold - 1
+        if self.request_count % self.request_threshold == mod:
+            delay = self.long_delay_time
+            logger.debug(
+                f"Request count = {self.request_count + 1}, sleeping {delay} s"
+            )
+        time.sleep(delay)
+
     async def download_image(self, url):
         """
         TODO
         """
-        # TODO: check if call is to site/proboards or external domain.
+        if "proboards.com" in url:
+            self._delay()
+            self.request_count += 1
         return await download_image(url, self.client_session, self.image_dir)
 
     async def get_source(self, url):
@@ -87,16 +100,9 @@ class ScraperManager:
         performed to help avoid request throttling by the server, which may
         result from a large number of requests in a short period of time.
         """
-        delay = self.short_delay_time
-        if self.request_count % self.request_threshold == 0:
-            delay = self.long_delay_time
-            logger.debug(
-                f"Request count = {self.request_count}, sleeping {delay} s"
-            )
-        time.sleep(delay)
-        source = await get_source(url, self.client_session)
+        self._delay()
         self.request_count += 1
-        return source
+        return await get_source(url, self.client_session)
 
     def insert_guest(self, name):
         """
