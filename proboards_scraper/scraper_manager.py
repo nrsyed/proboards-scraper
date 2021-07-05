@@ -52,6 +52,20 @@ class ScraperManager:
             user_queue = asyncio.Queue()
         self.user_queue = user_queue
 
+    def insert_guest(self, name):
+        """
+        TODO
+        """
+        guest = {
+            "id": -1,
+            "name": name,
+        }
+
+        # Get guest user id.
+        guest_db_obj = self.db.insert_guest(guest)
+        guest_id = guest_db_obj.id
+        return guest_id
+
     async def run(self):
         """
         TODO

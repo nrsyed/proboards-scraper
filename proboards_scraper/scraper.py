@@ -1,11 +1,12 @@
 # TODO: announcement thread (avoid visiting in every board)
 import asyncio
+import json
 import logging
 import os
 import pathlib
 import re
 import time
-from typing import List, Tuple
+from typing import Tuple
 
 import aiohttp
 import bs4
@@ -19,6 +20,14 @@ from proboards_scraper.database import Database
 
 
 logger = logging.getLogger(__name__)
+
+
+def int_(num: str) -> int:
+    """
+    Take an integer in the form of a string, remove any commas from it,
+    then return it as an ``int``.
+    """
+    return int(num.replace(",", ""))
 
 
 def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
@@ -129,7 +138,7 @@ async def scrape_user(url: str, manager: ScraperManager):
             user["location"] = val.text
         elif heading == "Posts":
             # Remove commas from post count (eg, "1,500" to "1500").
-            user["post_count"] = int(val.text.replace(",", ""))
+            user["post_count"] = int_(val.text)
         elif heading == "Web Site":
             website_anchor = val.find("a")
             user["website_url"] = website_anchor.get("href")
@@ -297,28 +306,11 @@ async def scrape_poll(
         await manager.content_queue.put(poll_voter)
 
 
-async def scrape_thread(
-    url: str,
-    manager: ScraperManager,
-    board_id: int = None,
-    user_id: int = None,
-    views: int = None,
-    announcement: bool = False,
-    locked: bool = False,
-    sticky: bool = False,
-    poll: bool = False,
-):
+async def scrape_thread(url: str, manager: ScraperManager):
     """
     Args:
         url:
         manager:
-        board_id:
-        user_id:
-        views:
-        announcement:
-        locked:
-        sticky:
-        poll:
     """
     # Get thread id from URL.
     expr = r"(.*)/thread/(\d+)/.*"
@@ -334,6 +326,44 @@ async def scrape_thread(
     # has a different class when JS is enabled).
     source = await get_source(url, manager.client_session)
 
+    # All thread metadata is contained in a particular <script> element in a
+    # somewhat convoluted manner. The method for extracting it is equally
+    # convoluted but implemented below with as much clarity as possible.
+    metadata_script = None
+
+    metadata_expr = '"thread":({.*?})'
+    script_tags = source.findAll("script")
+    for script_tag in script_tags:
+        script = str(script_tag.string)
+        if script.startswith("proboards.data("):
+            metadata_script = script
+            break
+    else:
+        logger.error(
+            f"Failed to find thread metadata script tag for {url}"
+        )
+
+    # Use the ``json`` module to get the metadata as a Python dict.
+    metadata_match = re.search(metadata_expr, metadata_script)
+    metadata_str = metadata_match.groups()[0]
+    metadata = json.loads(metadata_str)
+
+    announcement = metadata["is_announcement"] == 1
+    board_id = metadata["board_id"]
+    locked = metadata["is_locked"] == 1
+    poll = metadata["is_poll"] == 1
+    sticky = metadata["is_sticky"] == 1
+    user_id = metadata["created_by"]
+    views = int_(metadata["views"])
+
+    # If the create user id is 0, it means the user who created the thread
+    # is a guest. In this case, we jump ahead to the first post to grab the
+    # guest user name and get a database user id for the guest.
+    if user_id == 0:
+        first_post = source.select("tr.post.first")
+        guest_user_name = first_post.find("span", class_="user-guest").text
+        user_id = manager.insert_guest(guest_user_name)
+
     if poll:
         manager.driver.get(url)
         time.sleep(1)
@@ -344,18 +374,16 @@ async def scrape_thread(
 
         selenium_source = manager.driver.page_source
         selenium_source = bs4.BeautifulSoup(selenium_source, "html.parser")
-
-    post_container = source.find("div", class_="container posts")
-    title_bar = post_container.find("div", class_="title-bar")
-    thread_title = title_bar.find("h1").text
-
-    if poll:
         selenium_post_container = selenium_source.find(
             "div", class_="container posts"
         )
         poll_container = selenium_post_container.find("div", class_="poll")
         voters_container = selenium_source.find("div", {"id": "poll-voters"})
         await scrape_poll(thread_id, poll_container, voters_container, manager)
+
+    post_container = source.find("div", class_="container posts")
+    title_bar = post_container.find("div", class_="title-bar")
+    thread_title = title_bar.find("h1").text
 
     thread = {
         "type": "thread",
@@ -386,14 +414,8 @@ async def scrape_thread(
 
             if guest_ := left_panel.find("span", class_="user-guest"):
                 guest_user_name = guest_.text
-                guest = {
-                    "id": -1,
-                    "name": guest_user_name,
-                }
-
-                # Get new guest user id.
-                guest_db_obj = manager.db.insert_guest(guest)
-                user_id = guest_db_obj.id
+                guest_id = manager.insert_guest(guest_user_name)
+                user_id = guest_id
             else:
                 # <a> tag href attribute is of the form "/user/5".
                 user_link = left_panel.find("a", class_="user-link")
@@ -444,7 +466,7 @@ async def scrape_thread(
                 post_container = source.find("div", class_="container posts")
 
 
-async def scrape_board(url: str,manager: ScraperManager):
+async def scrape_board(url: str, manager: ScraperManager):
     """
     Args:
         moderators: Optional list of moderator ids for the board (this is
@@ -488,7 +510,6 @@ async def scrape_board(url: str,manager: ScraperManager):
         parent_board_href = parent_board_li.find("a")["href"]
         parent_id = int(parent_board_href.split("/")[-2])
 
-    moderators = None
     if source.find("a", id="moderators-link") is not None:
         manager.driver.get(url)
         time.sleep(1)
@@ -561,47 +582,12 @@ async def scrape_board(url: str,manager: ScraperManager):
             threads = thread_tbody.findAll("tr", class_="thread")
 
             for thread_ in threads:
-                announcement = "announcement" in thread_["class"]
-                sticky = "sticky" in thread_["class"]
-                locked = "locked" in thread_["class"]
-                poll = "poll" in thread_["class"]
-
-                views_text = thread_.find("td", class_="views").text
-                views = int(views_text.replace(",", ""))
-
-                created_by_tag = thread_.find("td", class_="created-by")
-
-                if guest_ := created_by_tag.find("span", class_="user-guest"):
-                    # This case occurs if the user is a guest or deleted user.
-                    # We assign the guest a user id of -1, add them to the
-                    # content queue (not user queue, which is intended for
-                    # registered users), and let :func:`add_to_database`
-                    # determine if this guest is already in the database (and
-                    # assign a new negative id if not).
-                    guest_user_name = guest_.text
-                    guest = {
-                        "id": -1,
-                        "name": guest_user_name,
-                    }
-
-                    # Get new guest user id.
-                    guest_db_obj = manager.db.insert_guest(guest)
-                    create_user_id = guest_db_obj.id
-                else:
-                    # The href attribute is of the form "/user/12".
-                    created_by_href = created_by_tag.find("a")["href"]
-                    create_user_id = int(created_by_href.split("/")[-1])
-
                 clickable = thread_.find("td", class_="main clickable")
                 anchor = clickable.find("span", class_="link target").find("a")
                 thread_href = anchor["href"]
                 thread_url = site_url + thread_href
-                await scrape_thread(
-                    thread_url, manager, board_id=board_id,
-                    user_id=create_user_id, views=views,
-                    announcement=announcement, locked=locked, sticky=sticky,
-                    poll=poll
-                )
+
+                await scrape_thread(thread_url, manager)
 
             # control-bar contains pagination/navigation buttons.
             control_bar = thread_container.find("ul", class_="ui-pagination")
