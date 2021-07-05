@@ -5,11 +5,14 @@ from typing import Callable, Literal
 
 import aiohttp
 
+from .http_requests import (
+    get_chrome_driver, get_login_cookies, get_login_session
+)
 from .scraper_manager import ScraperManager
 from proboards_scraper.database import Database
 from proboards_scraper.scraper import (
-    get_chrome_driver, get_login_cookies, get_login_session, split_url,
-    scrape_board, scrape_forum, scrape_thread, scrape_user, scrape_users,
+    split_url, scrape_board, scrape_forum, scrape_thread, scrape_user,
+    scrape_users,
 )
 
 

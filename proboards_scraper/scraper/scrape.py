@@ -8,7 +8,6 @@ from typing import Tuple
 
 import bs4
 
-from .http_requests import download_image, get_source
 from .utils import int_, split_url
 from proboards_scraper import ScraperManager
 
@@ -28,7 +27,7 @@ async def scrape_user(url: str, manager: ScraperManager):
         "id": int(os.path.split(url)[1])
     }
 
-    source = await get_source(url, manager.client_session)
+    source = await manager.get_source(url)
     user_container = source.find("div", {"class": "show-user"})
 
     # Get display name and group.
@@ -159,9 +158,7 @@ async def scrape_user(url: str, manager: ScraperManager):
     avatar_wrapper = user_container.find("div", class_="avatar-wrapper")
     avatar_url = avatar_wrapper.find("img")["src"]
 
-    avatar_ret = await download_image(
-        avatar_url, manager.client_session, manager.image_dir
-    )
+    avatar_ret = await manager.download_image(avatar_url)
 
     image = avatar_ret["image"]
     image["description"] = "avatar"
@@ -217,13 +214,13 @@ async def scrape_users(url: str, manager: ScraperManager):
     base_url, _ = split_url(url)
     member_hrefs = []
 
-    source = await get_source(url, manager.client_session)
+    source = await manager.get_source(url)
     _member_hrefs, next_href = scrape_user_urls(source)
     member_hrefs.extend(_member_hrefs)
 
     while next_href:
         next_url = f"{base_url}{next_href}"
-        source = await get_source(next_url, manager.client_session)
+        source = await manager.get_source(next_url)
         _member_hrefs, next_href = scrape_user_urls(source)
         member_hrefs.extend(_member_hrefs)
 
@@ -307,7 +304,7 @@ async def scrape_thread(url: str, manager: ScraperManager):
     # it, so we must also obtain the source via aiohttp as usual to ensure
     # that the rest of the elements can be scraped (e.g., the next page button
     # has a different class when JS is enabled).
-    source = await get_source(url, manager.client_session)
+    source = await manager.get_source(url)
 
     # All thread metadata is contained in a particular <script> element in a
     # somewhat convoluted manner. The method for extracting it is equally
@@ -444,7 +441,7 @@ async def scrape_thread(url: str, manager: ScraperManager):
             else:
                 next_href = next_btn.find("a")["href"]
                 next_url = f"{base_url}{next_href}"
-                source = await get_source(next_url, manager.client_session)
+                source = await manager.get_source(next_url)
                 post_container = source.find("div", class_="container posts")
 
 
@@ -458,7 +455,7 @@ async def scrape_board(url: str, manager: ScraperManager):
     base_url, url_path = split_url(url)
     board_id = int(url_path.split("/")[2])
 
-    source = await get_source(url, manager.client_session)
+    source = await manager.get_source(url)
 
     # Get board name and description from Information/Statistics container.
     stats_container = source.find("div", class_="container stats")
@@ -576,9 +573,7 @@ async def scrape_board(url: str, manager: ScraperManager):
                 next_page_href = next_btn.find("a")["href"]
                 next_page_url = base_url + next_page_href
                 logger.info(f"Getting source for {next_page_url}")
-                source = await get_source(
-                    next_page_url, manager.client_session
-                )
+                source = await manager.get_source(next_page_url)
                 thread_container = source.find(
                     "div", class_="container threads"
                 )
@@ -622,9 +617,7 @@ async def scrape_smileys(
         emoticon = img_tag["title"]
         img_url = img_tag["src"]
 
-        smiley_ret = await download_image(
-            img_url, manager.client_session, manager.image_dir
-        )
+        smiley_ret = await manager.download_image(img_url)
 
         image = smiley_ret["image"]
         image["type"] = "image"
