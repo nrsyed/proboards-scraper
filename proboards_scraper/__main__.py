@@ -104,7 +104,7 @@ def pbs_cli():
 
     configure_logging(args.verbosity)
 
-    proboards_scraper.scrape_site(
+    proboards_scraper.run_scraper(
         args.url, dst_dir=args.output, username=args.username,
         password=args.password, skip_users=args.skip_users
     )

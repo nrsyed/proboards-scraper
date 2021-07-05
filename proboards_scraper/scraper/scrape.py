@@ -1,60 +1,19 @@
-# TODO: announcement thread (avoid visiting in every board)
 import asyncio
 import json
 import logging
 import os
-import pathlib
 import re
 import time
-from typing import Callable, Literal, Tuple
+from typing import Tuple
 
-import aiohttp
 import bs4
 
-from .http_requests import (
-    download_image, get_chrome_driver, get_login_cookies, get_login_session,
-    get_source
-)
-from .scraper_manager import ScraperManager
-from proboards_scraper.database import Database
+from .http_requests import download_image, get_source
+from .utils import int_, split_url
+from proboards_scraper import ScraperManager
 
 
 logger = logging.getLogger(__name__)
-
-
-def int_(num: str) -> int:
-    """
-    Take an integer in the form of a string, remove any commas from it,
-    then return it as an ``int``.
-    """
-    return int(num.replace(",", ""))
-
-
-def split_url(url: str) -> Tuple[str, str]:
-    """
-    Take a forum page URL and return the base URL (e.g.,
-    `https://yoursite.proboards.com`) and resource path component (e.g.,
-    `board/3/boardname`).
-
-    Site/page URLs take the following forms:
-    Homepage: https://yoursite.proboards.com/
-    Board: https://yoursite.proboards.com/board/3/boardname
-    Thread: https://yoursite.proboards.com/thread/123/threadname
-    Users: https://yoursite.proboards.com/members
-    User: https://yoursite.proboards.com/user/10
-
-    Args:
-        url: URL to a forum page.
-
-    Returns:
-        The base URL and resource path URL component (or ``None`` if ``url``
-        is just the base/homepage URL).
-    """
-    url = url.rstrip("/")
-    expr = r"(^.*\.com)(/.*)?$"
-    match = re.match(expr, url)
-    base_url, path = match.groups()
-    return base_url, path
 
 
 async def scrape_user(url: str, manager: ScraperManager):
@@ -722,125 +681,3 @@ async def scrape_forum(url: str, manager: ScraperManager):
             href = link["href"]
             board_url = f"{url}{href}"
             await scrape_board(board_url, manager)
-
-
-async def _scrape_task_wrapper(
-    func: Callable,
-    queue_name: Literal["user", "content", "both"],
-    url: str,
-    manager: ScraperManager
-):
-    """
-    Args:
-        func: The async function to be called for scraping user(s) or content.
-        queue_name: The queue(s) in which ``None`` should be put after ``func``
-            completes, signaling to :meth:`ScraperManager.run` that that
-            queue's task is complete.
-        url: The URL to be passed to ``func``.
-        manager: The ``ScraperManager`` instance to be passed to ``func``.
-    """
-    await func(url, manager)
-
-    if queue_name == "both" or queue_name == "user":
-        await manager.user_queue.put(None)
-
-    if queue_name == "both" or queue_name == "content":
-        await manager.content_queue.put(None)
-
-
-# TODO: rename this function
-def scrape_site(
-    url: str,
-    dst_dir: pathlib.Path = "site",
-    username: str = None,
-    password: str = None,
-    skip_users: bool = False
-):
-    """
-    Args:
-        url:
-        dst_dir:
-        username:
-        password:
-        skip_users:
-    """
-    dst_dir = dst_dir.expanduser().resolve()
-    dst_dir.mkdir(parents=True, exist_ok=True)
-
-    image_dir = dst_dir / "images"
-    image_dir.mkdir(exist_ok=True)
-
-    db_path = dst_dir / "forum.db"
-    db = Database(db_path)
-
-    chrome_driver = get_chrome_driver()
-
-    base_url, url_path = split_url(url)
-
-    # Get cookies for parts of the site requiring login authentication.
-    if username and password:
-        logger.info(f"Logging in to {base_url}")
-        cookies = get_login_cookies(
-            base_url, username, password, chrome_driver
-        )
-
-        # Create a persistent aiohttp login session from the cookies.
-        client_session = get_login_session(cookies)
-        logger.info("Login successful")
-    else:
-        logger.info(
-            "Username and/or password not provided; proceeding without login"
-        )
-        client_session = aiohttp.ClientSession()
-
-    manager = ScraperManager(
-        db, client_session, driver=chrome_driver, image_dir=image_dir
-    )
-
-    tasks = []
-
-    users_task = None
-    content_task = None
-
-    if url_path is None:
-        # This represents the case where the forum homepage URL was provided,
-        # i.e., we scrape the entire site.
-        logger.info("Scraping entire forum")
-
-        content_task = _scrape_task_wrapper(
-            scrape_forum, "content", base_url, manager
-        )
-
-        if skip_users:
-            logger.info("Skipping user profiles")
-        else:
-            users_page_url = f"{base_url}/members"
-            users_task = _scrape_task_wrapper(
-                scrape_users, "user", users_page_url, manager
-            )
-    elif url_path.startswith("/members"):
-        users_task = _scrape_task_wrapper(scrape_users, "both", url, manager)
-    elif url_path.startswith("/user"):
-        users_task = _scrape_task_wrapper(scrape_user, "both", url, manager)
-    elif url_path.startswith("/board"):
-        content_task = _scrape_task_wrapper(
-            scrape_board, "content", url, manager
-        )
-    elif url_path.startswith("/thread"):
-        content_task = _scrape_task_wrapper(
-            scrape_thread, "content", url, manager
-        )
-
-    if users_task is not None:
-        tasks.append(users_task)
-    else:
-        manager.user_queue = None
-
-    if content_task is not None:
-        tasks.append(content_task)
-
-    database_task = manager.run()
-    tasks.append(database_task)
-
-    task_group = asyncio.gather(*tasks)
-    asyncio.get_event_loop().run_until_complete(task_group)

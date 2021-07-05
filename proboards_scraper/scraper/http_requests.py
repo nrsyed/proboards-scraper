@@ -14,7 +14,7 @@ import selenium.webdriver
 
 logger = logging.getLogger(__name__)
 
-GET_REQUEST_DELAY = 0.5
+GET_REQUEST_DELAY = 1
 
 
 def get_chrome_driver():

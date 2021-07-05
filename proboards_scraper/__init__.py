@@ -1,7 +1,8 @@
 from . import database
-from .scraper import scrape_site
 from .scraper_manager import ScraperManager
+from . import scraper
+from .core import run_scraper
 
 __all__ = [
-    "database", "scrape_site", "ScraperManager"
+    "database", "run_scraper", "scraper", "ScraperManager"
 ]
