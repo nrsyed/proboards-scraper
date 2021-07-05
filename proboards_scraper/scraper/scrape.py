@@ -52,13 +52,13 @@ async def scrape_user(url: str, manager: ScraperManager):
             elif child.strip() == "Last Online:":
                 # Get Unix timestamp string from <abbr> tag.
                 lastonline_block = children[i+1]
-                unix_ts = lastonline_block.find("abbr")["data-timestamp"]
+                unix_ts = int(lastonline_block.find("abbr")["data-timestamp"])
                 user["last_online"] = unix_ts
             elif child.strip() == "Member is Online":
                 # This will be the case for the aiohttp session's logged-in
                 # user (and for any other user that happens to be logged in).
                 # Multiply time.time() value by 1000 for milliseconds.
-                unix_ts = str(int(time.time()) * 1000)
+                unix_ts = int(time.time()) * 1000
                 user["last_online"] = unix_ts
 
     # Get rest of user info from the table in the user status form.
@@ -92,7 +92,7 @@ async def scrape_user(url: str, manager: ScraperManager):
         elif heading == "Birthday":
             user["birthdate"] = val.text
         elif heading == "Date Registered":
-            user["date_registered"] = val.find("abbr")["data-timestamp"]
+            user["date_registered"] = int(val.find("abbr")["data-timestamp"])
         elif heading == "Email":
             user["email"] = val.text
         elif heading == "Gender":
@@ -404,7 +404,7 @@ async def scrape_thread(url: str, manager: ScraperManager):
             post_info = post_content.find("div", class_="info")
 
             date_abbr = post_info.find("span", class_="date").find("abbr")
-            date = date_abbr["data-timestamp"]
+            date = int(date_abbr["data-timestamp"])
 
             article = post_content.find("article")
             message_ = article.find("div", class_="message")
@@ -415,7 +415,7 @@ async def scrape_thread(url: str, manager: ScraperManager):
 
             edited_by = post_.find("div", class_="edited_by")
             if edited_by is not None:
-                last_edited = edited_by.find("abbr")["data-timestamp"]
+                last_edited = int(edited_by.find("abbr")["data-timestamp"])
                 edit_user_href = edited_by.find("a")["href"]
                 edit_user_id = int(edit_user_href.split("/")[-1])
 
@@ -592,7 +592,7 @@ async def scrape_shoutbox(
             if match := re.match(post_id_expr, class_):
                 post_id = match.groups()[0]
 
-        timestamp = post.find("abbr", class_="time")["data-timestamp"]
+        timestamp = int(post.find("abbr", class_="time")["data-timestamp"])
         message = post.find("span", class_="message").text
         user_id = int(post.find("a", class_="user-link")["data-id"])
 

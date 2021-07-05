@@ -177,9 +177,9 @@ class Post(Base):
     """
     Attributes:
         id (int):
-        date (str): When the post was made (Unix timestamp).
+        date (int): When the post was made (Unix timestamp).
         edit_user_id (int): User (in ``user`` table) who made the last edit.
-        last_edited (str): When the post was last edited (Unix timestamp); if
+        last_edited (int): When the post was last edited (Unix timestamp); if
             never, this field should be null.
         message (str): Post content/message.
         thread_id (int): Thread (in ``thread``) where the post was made.
@@ -189,9 +189,9 @@ class Post(Base):
     __tablename__ = "post"
 
     id = Column("id", Integer, primary_key=True, autoincrement=False)
-    date = Column("date", String)
+    date = Column("date", Integer)
     edit_user_id = Column("edit_user_id", ForeignKey("user.id"))
-    last_edited = Column("last_edited", String)
+    last_edited = Column("last_edited", Integer)
     message = Column("message", String)
     thread_id = Column(
         "thread_id", ForeignKey("thread.id"), nullable=False
@@ -208,14 +208,14 @@ class ShoutboxPost(Base):
 
     Attributes:
         id (int): Autoincrementing primary key.
-        date (str): When the post was made (Unix timestamp).
+        date (int): When the post was made (Unix timestamp).
         message (str): Post content/message.
         user_id (int): User who made the post.
     """
     __tablename__ = "shoutbox_post"
 
     id = Column("id", Integer, primary_key=True, autoincrement=False)
-    date = Column("date", String)
+    date = Column("date", Integer)
     message = Column("message", String)
     user_id = Column("user_id", Integer, ForeignKey("user.id"))
 
@@ -264,14 +264,14 @@ class User(Base):
             user and does not refer to an actual user id.
         age (int): Optional
         birthdate (str): Optional
-        date_registered (str): Unix timestamp
+        date_registered (int): Unix timestamp
         email (str): User email.
         instant_messengers (str): Optional; a string consisting of
             semicolon-delimited "messenger_name:screen_name" pairs, eg,
             "AIM:ssj_goku12;ICQ:12345;YIM:duffman20".
         gender (str): Optional ("Male"/"Female"/"Other")
         group (str): Group/rank (eg, "Regular Membership", "Global Moderator")
-        last_online (str): Unix timestamp
+        last_online (int): Unix timestamp
         latest_status (str): Optional
         location (str): Optional
         name (str): Display name.
@@ -294,12 +294,12 @@ class User(Base):
 
     age = Column("age", Integer)
     birthdate = Column("birthdate", String)
-    date_registered = Column("date_registered", String)
+    date_registered = Column("date_registered", Integer)
     email = Column("email", String)
     instant_messengers = Column("instant_messengers", String)
     gender = Column("gender", String)
     group = Column("group", String)
-    last_online = Column("last_online", String)
+    last_online = Column("last_online", Integer)
     latest_status = Column("latest_status", String)
     location = Column("location", String)
     name = Column("name", String)
