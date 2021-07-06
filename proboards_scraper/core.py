@@ -48,7 +48,8 @@ def run_scraper(
     dst_dir: pathlib.Path = "site",
     username: str = None,
     password: str = None,
-    skip_users: bool = False
+    skip_users: bool = False,
+    no_delay: bool = False
 ):
     """
     Args:
@@ -87,8 +88,18 @@ def run_scraper(
         )
         client_session = aiohttp.ClientSession()
 
+    manager_kwargs = {
+        "driver": chrome_driver,
+        "image_dir": image_dir,
+    }
+
+    if no_delay:
+        manager_kwargs["request_threshold"] = None
+        manager_kwargs["short_delay_time"] = None
+        manager_kwargs["long_delay_time"] = None
+
     manager = ScraperManager(
-        db, client_session, driver=chrome_driver, image_dir=image_dir
+        db, client_session, **manager_kwargs
     )
 
     tasks = []

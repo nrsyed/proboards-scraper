@@ -7,6 +7,7 @@ import time
 from typing import Tuple
 
 import bs4
+import cssutils
 
 from .utils import int_, split_url
 from proboards_scraper import ScraperManager
@@ -438,17 +439,17 @@ async def scrape_thread(url: str, manager: ScraperManager):
             }
             await manager.content_queue.put(post)
 
-            # Continue to next page, if any.
-            control_bar = post_container.find("div", class_="control-bar")
-            next_btn = control_bar.find("li", class_="next")
+        # Continue to next page, if any.
+        control_bar = post_container.find("div", class_="control-bar")
+        next_btn = control_bar.find("li", class_="next")
 
-            if "state-disabled" in next_btn["class"]:
-                pages_remaining = False
-            else:
-                next_href = next_btn.find("a")["href"]
-                next_url = f"{base_url}{next_href}"
-                source = await manager.get_source(next_url)
-                post_container = source.find("div", class_="container posts")
+        if "state-disabled" in next_btn["class"]:
+            pages_remaining = False
+        else:
+            next_href = next_btn.find("a")["href"]
+            next_url = f"{base_url}{next_href}"
+            source = await manager.get_source(next_url)
+            post_container = source.find("div", class_="container posts")
 
 
 async def scrape_board(url: str, manager: ScraperManager):
@@ -652,9 +653,38 @@ async def scrape_forum(url: str, manager: ScraperManager):
     favicon_image["description"] = "favicon"
     favicon_image["type"] = "image"
     await manager.content_queue.put(favicon_image)
-    
-    # Grab banner image.
-    # TODO
+
+    # Grab site background and banner from CSS (TODO: add CSS to database?)
+    bg_image_expr = r"url\((.+)\)"
+    stylesheets = source.findAll("link", {"rel": "stylesheet"})
+    for i, stylesheet in enumerate(stylesheets):
+        css_href = stylesheet["href"]
+        css_url = f"https:{css_href}"
+        css = await manager.get_source(css_url)
+
+        sheet = cssutils.parseString(css.text)
+        for rule in sheet:
+            if (
+                rule.type == rule.STYLE_RULE
+                and "background-image" in rule.style
+                and rule.selectorText in ("body", "#banner")
+            ):
+                # Background image CSS styles have the form
+                # 'url(http://domain.com/path/to/img.jpg)'.
+                bg_image_style = rule.style["background-image"]
+                bg_image_match = re.match(bg_image_expr, bg_image_style)
+                bg_image_url = bg_image_match.groups()[0]
+
+                bg_image_ret = await manager.download_image(bg_image_url)
+                bg_image = bg_image_ret["image"]
+                bg_image["type"] = "image"
+
+                if rule.selectorText == "body":
+                    bg_image["description"] = "background"
+                elif rule.selectorText == "#banner":
+                    bg_image["description"] = "banner"
+
+                await manager.content_queue.put(bg_image)
 
     smiley_menu = source.find("ul", class_="smiley-menu")
     await scrape_smileys(smiley_menu, manager)

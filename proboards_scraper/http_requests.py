@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 def test_ico(h: bytes, f):
     if h.startswith(b"\x00\x00") and (h[2:4] in (b"\x01\x00', b'\x02\x00")):
         return "ico"
+
+
 imghdr.tests.append(test_ico)
 
 
@@ -152,7 +154,7 @@ async def download_image(
     }
 
     try:
-        response = await session.get(url, timeout=30)
+        response = await session.get(url, timeout=45)
     except aiohttp.client_exceptions.ClientConnectorError as e:
         logger.warning(
             f"Failed to download image at {url}: {str(e)} "

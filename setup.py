@@ -1,8 +1,8 @@
-from setuptools import setup
+fom setuptools import setup
 
 setup(
     name="proboards-scraper",
-    version="0.9",
+    version="1.0",
     author="Najam R. Syed",
     author_email="najam.r.syed@gmail.com",
     license="MIT",
