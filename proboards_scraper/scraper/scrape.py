@@ -416,8 +416,17 @@ async def scrape_thread(url: str, manager: ScraperManager):
             edited_by = post_.find("div", class_="edited_by")
             if edited_by is not None:
                 last_edited = int(edited_by.find("abbr")["data-timestamp"])
-                edit_user_href = edited_by.find("a")["href"]
-                edit_user_id = int(edit_user_href.split("/")[-1])
+                edit_user_anchor = edited_by.find("a")
+
+                if edit_user_anchor is None:
+                    # This represents the case where a guest user has edited
+                    # their own post.
+                    edit_guest = edited_by.find("span", class_="user-guest")
+                    guest_user_name = edit_guest.text
+                    edit_user_id = manager.insert_guest(guest_user_name)
+                else:
+                    edit_user_href = edited_by.find("a")["href"]
+                    edit_user_id = int(edit_user_href.split("/")[-1])
 
             post = {
                 "type": "post",
