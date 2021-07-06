@@ -71,20 +71,25 @@ class Database:
         self.engine = engine
         self.session = session
 
-    def _insert_log_msg(self, item_desc: str, inserted: bool):
+    def _insert_log_msg(self, item_desc: str, inserted: int):
         """
         Args:
             item_desc: Item description.
-            inserted: Whether or not the item was added to the database.
+            inserted: Whether the item was updated (2), added (1), or not
+                added (0) to the database.
         """
-        if inserted:
-            logger.info(f"{item_desc} added to database")
-        else:
+        if inserted == 0:
             logger.info(f"{item_desc} already exists in database")
+        elif inserted == 1:
+            logger.info(f"{item_desc} added to database")
+        elif inserted == 2:
+            logger.info(f"{item_desc} database entry was updated")
 
     def insert(
-        self, obj: sqlalchemy.orm.DeclarativeMeta, filters: dict = None
-    ) -> Tuple[bool, sqlalchemy.orm.DeclarativeMeta]:
+        self, obj: sqlalchemy.orm.DeclarativeMeta,
+        filters: dict = None,
+        update: bool = False
+    ) -> Tuple[int, sqlalchemy.orm.DeclarativeMeta]:
         """
         Query the database for an object of the given ``Metaclass`` using the
         given ``filters`` to determine if it already exists in the database.
@@ -97,38 +102,46 @@ class Database:
         Metaclass = type(obj)
         result = self.session.query(Metaclass).filter_by(**filters).first()
 
-        inserted = False
+        inserted = 0
         if result is None:
             self.session.add(obj)
             self.session.commit()
-            inserted = True
+            inserted = 1
+            ret = obj
+        elif result is not None and update:
+            for attr, val in vars(obj).items():
+                if not attr.startswith("_"):
+                    setattr(result, attr, val)
+            self.session.commit()
+            inserted = 2
+            ret = result
         else:
-            obj = result
-        return inserted, obj
+            ret = result
+        return inserted, ret
 
-    def insert_avatar(self, avatar_: dict):
+    def insert_avatar(self, avatar_: dict, update: bool = False):
         avatar = Avatar(**avatar_)
         filters = {
             "image_id": avatar.image_id,
             "user_id": avatar.user_id,
         }
-        inserted, avatar = self.insert(avatar, filters)
+        inserted, avatar = self.insert(avatar, filters=filters, update=update)
         self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
         return avatar
 
-    def insert_board(self, board_: dict):
+    def insert_board(self, board_: dict, update: bool = False):
         board = Board(**board_)
-        inserted, board = self.insert(board)
+        inserted, board = self.insert(board, update=update)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
 
-    def insert_category(self, category_: dict):
+    def insert_category(self, category_: dict, update: bool = False):
         category = Category(**category_)
-        inserted, category = self.insert(category)
+        inserted, category = self.insert(category, update=update)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
-    def insert_image(self, image_: dict):
+    def insert_image(self, image_: dict, update: bool = False):
         image = Image(**image_)
 
         # To determine if the image already exists in the database, search by
@@ -140,42 +153,46 @@ class Database:
         else:
             filters = {"url": image.url}
 
-        inserted, image = self.insert(image, filters)
+        inserted, image = self.insert(image, filters=filters, update=update)
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
 
-    def insert_moderator(self, moderator_: dict):
+    def insert_moderator(self, moderator_: dict, update: bool = False):
         moderator = Moderator(**moderator_)
         filters = {
             "user_id": moderator.user_id,
             "board_id": moderator.board_id,
         }
-        inserted, moderator = self.insert(moderator, filters)
+        inserted, moderator = self.insert(
+            moderator, filters=filters, update=update
+        )
         self._insert_log_msg(
             f"Moderator ({moderator.user_id}, board {moderator.board_id})",
             inserted
         )
         return moderator
 
-    def insert_poll(self, poll_: dict):
+    def insert_poll(self, poll_: dict, update: bool = False):
         poll = Poll(**poll_)
-        inserted, poll = self.insert(poll)
+        inserted, poll = self.insert(poll, update=update)
         self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
         return poll
 
-    def insert_poll_option(self, poll_option_: dict):
+    def insert_poll_option(self, poll_option_: dict, update: bool = False):
         poll_option = PollOption(**poll_option_)
-        inserted, poll_option = self.insert(poll_option)
+        inserted, poll_option = self.insert(poll_option, update=update)
         self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
         return poll_option
 
-    def insert_poll_voter(self, poll_voter_: dict):
+    def insert_poll_voter(self, poll_voter_: dict, update: bool = False):
         poll_voter = PollVoter(**poll_voter_)
         filters = {
             "poll_id": poll_voter.poll_id,
             "user_id": poll_voter.user_id,
         }
-        inserted, poll_voter = self.insert(poll_voter, filters)
+        inserted, poll_voter = self.insert(
+            poll_voter, filters=filters, update=update
+        )
         self._insert_log_msg(
             f"Poll voter (thread {poll_voter.poll_id}, "
             f"user {poll_voter.user_id})",
@@ -183,29 +200,29 @@ class Database:
         )
         return poll_voter
 
-    def insert_post(self, post_: dict):
+    def insert_post(self, post_: dict, update: bool = False):
         post = Post(**post_)
-        inserted, post = self.insert(post)
+        inserted, post = self.insert(post, update=update)
         self._insert_log_msg(
             f"Post {post.id} (thread {post.thread_id}, user {post.user_id})",
             inserted)
         return post
 
-    def insert_shoutbox_post(self, shoutbox_post_: dict):
+    def insert_shoutbox_post(self, shoutbox_post_: dict, update: bool = False):
         shoutbox_post = ShoutboxPost(**shoutbox_post_)
-        inserted, shoutbox_post = self.insert(shoutbox_post)
+        inserted, shoutbox_post = self.insert(shoutbox_post, update=update)
         self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
         return shoutbox_post
 
-    def insert_thread(self, thread_: dict):
+    def insert_thread(self, thread_: dict, update: bool = False):
         thread = Thread(**thread_)
-        inserted, thread = self.insert(thread)
+        inserted, thread = self.insert(thread, update=update)
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
 
-    def insert_user(self, user_: dict):
+    def insert_user(self, user_: dict, update: bool = False):
         user = User(**user_)
-        inserted, user = self.insert(user)
+        inserted, user = self.insert(user, update=update)
         self._insert_log_msg(f"User {user.name}", inserted)
         return user
 
