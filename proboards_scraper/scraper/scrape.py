@@ -653,8 +653,8 @@ async def scrape_forum(url: str, manager: ScraperManager):
     favicon_image["description"] = "favicon"
     favicon_image["type"] = "image"
     await manager.content_queue.put(favicon_image)
-    
-    # Grab CSS (TODO: add CSS to database?)
+
+    # Grab site background and banner from CSS (TODO: add CSS to database?)
     bg_image_expr = r"url\((.+)\)"
     stylesheets = source.findAll("link", {"rel": "stylesheet"})
     for i, stylesheet in enumerate(stylesheets):
