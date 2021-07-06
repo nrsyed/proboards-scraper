@@ -15,6 +15,6 @@ virtually every other forum hosting provider).**
 with ProBoards.**
 
 **Per the MIT license included in this repository, this software is provided
-"as is" without warranty of any kind and is not guaranteed to work, nor shall
-the author or the software be held liable for any consequences resulting from
-its use.**
+"as is" without warranty of any kind and is not guaranteed to work, and neither
+the author nor the software shall be held liable for any consequences
+resulting from its use.**
