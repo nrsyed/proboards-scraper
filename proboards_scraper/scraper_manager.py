@@ -22,9 +22,9 @@ class ScraperManager:
         driver: selenium.webdriver.Chrome = None,
         image_dir: pathlib.Path = None,
         user_queue: asyncio.Queue = None,
-        request_threshold: int = 20,
-        short_delay_time: float = 1.0,
-        long_delay_time: float = 15.0
+        request_threshold: int = 10,
+        short_delay_time: float = 2.0,
+        long_delay_time: float = 30.0
     ):
         """
         Args:
@@ -117,6 +117,11 @@ class ScraperManager:
         guest_db_obj = self.db.insert_guest(guest)
         guest_id = guest_db_obj.id
         return guest_id
+
+    def insert_image(self, image):
+        image_db_obj = self.db.insert_image(image)
+        image_id = image_db_obj.id
+        return image_id
 
     async def run(self):
         """

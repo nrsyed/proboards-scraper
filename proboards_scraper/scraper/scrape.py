@@ -159,7 +159,6 @@ async def scrape_user(url: str, manager: ScraperManager):
     avatar_url = avatar_wrapper.find("img")["src"]
 
     avatar_ret = await manager.download_image(avatar_url)
-
     image = avatar_ret["image"]
     image["description"] = "avatar"
 
@@ -171,9 +170,7 @@ async def scrape_user(url: str, manager: ScraperManager):
     # still store an Image in the database that contains the original avatar
     # URL (and an Avatar linking that Image to the current user).
 
-    # TODO: make a dedicated method for this in the ScraperManager?
-    image_db_obj = manager.db.insert_image(image)
-    image_id = image_db_obj.id
+    image_id = manager.insert_image(image)
 
     avatar = {
         "user_id": user["id"],
@@ -647,6 +644,17 @@ async def scrape_forum(url: str, manager: ScraperManager):
     manager.driver.get(url)
     time.sleep(1)
     source = bs4.BeautifulSoup(manager.driver.page_source, "html.parser")
+
+    # Grab favicon.
+    favicon_url = source.find("link", {"rel": "icon"})["href"]
+    favicon_ret = await manager.download_image(favicon_url)
+    favicon_image = favicon_ret["image"]
+    favicon_image["description"] = "favicon"
+    favicon_image["type"] = "image"
+    await manager.content_queue.put(favicon_image)
+    
+    # Grab banner image.
+    # TODO
 
     smiley_menu = source.find("ul", class_="smiley-menu")
     await scrape_smileys(smiley_menu, manager)
