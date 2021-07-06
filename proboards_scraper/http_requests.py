@@ -154,7 +154,7 @@ async def download_image(
     }
 
     try:
-        response = await session.get(url, timeout=30)
+        response = await session.get(url, timeout=45)
     except aiohttp.client_exceptions.ClientConnectorError as e:
         logger.warning(
             f"Failed to download image at {url}: {str(e)} "
