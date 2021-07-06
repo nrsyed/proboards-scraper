@@ -439,17 +439,17 @@ async def scrape_thread(url: str, manager: ScraperManager):
             }
             await manager.content_queue.put(post)
 
-            # Continue to next page, if any.
-            control_bar = post_container.find("div", class_="control-bar")
-            next_btn = control_bar.find("li", class_="next")
+        # Continue to next page, if any.
+        control_bar = post_container.find("div", class_="control-bar")
+        next_btn = control_bar.find("li", class_="next")
 
-            if "state-disabled" in next_btn["class"]:
-                pages_remaining = False
-            else:
-                next_href = next_btn.find("a")["href"]
-                next_url = f"{base_url}{next_href}"
-                source = await manager.get_source(next_url)
-                post_container = source.find("div", class_="container posts")
+        if "state-disabled" in next_btn["class"]:
+            pages_remaining = False
+        else:
+            next_href = next_btn.find("a")["href"]
+            next_url = f"{base_url}{next_href}"
+            source = await manager.get_source(next_url)
+            post_container = source.find("div", class_="container posts")
 
 
 async def scrape_board(url: str, manager: ScraperManager):
