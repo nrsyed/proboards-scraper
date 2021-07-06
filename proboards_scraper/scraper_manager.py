@@ -22,9 +22,9 @@ class ScraperManager:
         driver: selenium.webdriver.Chrome = None,
         image_dir: pathlib.Path = None,
         user_queue: asyncio.Queue = None,
-        request_threshold: int = 10,
-        short_delay_time: float = 2.0,
-        long_delay_time: float = 30.0
+        request_threshold: int = 15,
+        short_delay_time: float = 1.5,
+        long_delay_time: float = 20.0
     ):
         """
         Args:
@@ -71,23 +71,28 @@ class ScraperManager:
         self.long_delay_time = long_delay_time
         self.request_count = 0
 
-    def _delay(self):
+    async def _delay(self):
+        if not self.short_delay_time and not self.long_delay_time:
+            return
+
         delay = self.short_delay_time
 
-        mod = self.request_threshold - 1
-        if self.request_count % self.request_threshold == mod:
-            delay = self.long_delay_time
-            logger.debug(
-                f"Request count = {self.request_count + 1}, sleeping {delay} s"
-            )
-        time.sleep(delay)
+        if self.request_threshold is not None and self.long_delay_time:
+            mod = self.request_threshold - 1
+            if self.request_count % self.request_threshold == mod:
+                delay = self.long_delay_time
+                logger.debug(
+                    f"Request count = {self.request_count + 1}, "
+                    f"sleeping {delay} s"
+                )
+        await asyncio.sleep(delay)
 
     async def download_image(self, url):
         """
         TODO
         """
         if "proboards.com" in url:
-            self._delay()
+            await self._delay()
             self.request_count += 1
         return await download_image(url, self.client_session, self.image_dir)
 
@@ -100,7 +105,7 @@ class ScraperManager:
         performed to help avoid request throttling by the server, which may
         result from a large number of requests in a short period of time.
         """
-        self._delay()
+        await self._delay()
         self.request_count += 1
         return await get_source(url, self.client_session)
 

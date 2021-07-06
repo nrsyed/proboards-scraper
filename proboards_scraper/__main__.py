@@ -82,6 +82,9 @@ def pbs_cli():
     )
 
     parser.add_argument(
+        "-D", "--no-delay", action="store_true", help="Do not rate limit requests"
+    )
+    parser.add_argument(
         "-U", "--no-users", action="store_true", dest="skip_users",
         help="Do not grab user profiles (only use this options if a database "
         "exists and users have already been added to it)"
@@ -106,7 +109,8 @@ def pbs_cli():
 
     proboards_scraper.run_scraper(
         args.url, dst_dir=args.output, username=args.username,
-        password=args.password, skip_users=args.skip_users
+        password=args.password, skip_users=args.skip_users,
+        no_delay=args.no_delay
     )
 
 
