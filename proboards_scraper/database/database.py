@@ -186,7 +186,9 @@ class Database:
     def insert_post(self, post_: dict):
         post = Post(**post_)
         inserted, post = self.insert(post)
-        self._insert_log_msg(f"Post {post.id}", inserted)
+        self._insert_log_msg(
+            f"Post {post.id} (thread {post.thread_id}, user {post.user_id})",
+            inserted)
         return post
 
     def insert_shoutbox_post(self, shoutbox_post_: dict):
@@ -271,6 +273,7 @@ class Database:
             # (but only for querying a single board).
             result.__dict__["moderators"] = list(result.moderators)
             result.__dict__["sub_boards"] = list(result.sub_boards)
+            result.__dict__["threads"] = list(result.threads)
         else:
             result = result.all()
         return serialize(result)

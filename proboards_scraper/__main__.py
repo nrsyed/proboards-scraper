@@ -181,12 +181,30 @@ def pbd_cli():
             if "sub_boards" in board:
                 sub = [sub["id"] for sub in board["sub_boards"]]
                 board["sub_boards"] = sub
+
+            threads = []
+            for thread in board["threads"]:
+                last_post = max(post["date"] for post in thread["posts"])
+                threads.append(
+                    {
+                        "thread_id": thread["id"],
+                        "title": thread["title"],
+                        "num_posts": len(thread["posts"]),
+                        "last_post": last_post,
+                    }
+                )
+            threads.sort(key=lambda t: t["last_post"], reverse=True)
+            for thread in threads:
+                del thread["last_post"]
+
+            board["threads"] = threads
+            board["num_threads"] = len(threads)
+            board["posts"] = sum(t["num_posts"] for t in threads)
             pprint(board)
     elif action == "thread":
         result = db.query_threads(thread_id=value)
         thread = result
         if thread is not None and "poll" in thread:
-            breakpoint()
             poll_options = [
                 {"name": opt["name"], "votes": opt["votes"]}
                 for opt in thread["poll"]["options"]
