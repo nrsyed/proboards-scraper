@@ -75,6 +75,19 @@ class Category(Base):
     boards = relationship("Board")
 
 
+class CSS(Base):
+    """
+    Table for storing information related to downloaded CSS files.
+    """
+    __tablename__ = "css"
+
+    id = Column("id", Integer, primary_key=True)
+    description = Column("description", String)
+    filename = Column("filename", String)
+    md5_hash = Column("md5_hash", String)
+    url = Column("url", String)
+
+
 class Image(Base):
     """
     Generic image table/class for storing metadata for any image. Image files
