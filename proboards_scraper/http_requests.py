@@ -16,12 +16,26 @@ logger = logging.getLogger(__name__)
 
 
 def test_ico(h: bytes, f):
+    """
+    Test for .ico files to be added to the ``imghdr`` module tests.
+    See `ICO file format`_ and `imghdr.tests`_.
+
+    .. _`ICO file format`: https://en.wikipedia.org/wiki/ICO_(file_format)
+    .. _`imghdr.tests`:
+        https://docs.python.org/3/library/imghdr.html#imghdr.tests
+    """
     if h.startswith(b"\x00\x00") and (h[2:4] in (b"\x01\x00", b"\x02\x00")):
         return "ico"
 imghdr.tests.append(test_ico)
 
 
-def get_chrome_driver():
+def get_chrome_driver() -> selenium.webdriver.Chrome:
+    """
+    Returns an instance of a Selenium Chrome driver with the headless
+    option set to ``True``.
+
+    Returns: headless Chrome driver.
+    """
     chrome_opts = selenium.webdriver.ChromeOptions()
     chrome_opts.headless = True
     driver = selenium.webdriver.Chrome(options=chrome_opts)
@@ -31,9 +45,21 @@ def get_chrome_driver():
 def get_login_cookies(
     home_url: str, username: str, password: str,
     driver: selenium.webdriver.Chrome = None, page_load_wait: int = 1
-) -> dict:
+) -> List[dict]:
     """
-    TODO
+    Logs in to a Proboards account using Selenium and returns the cookies from
+    the authenticated login session.
+
+    Args:
+        home_url: URL for the Proboards forum homepage.
+        username: Login username.
+        password: Login password.
+        driver: Selenium Chrome driver (optional).
+        page_load_wait: Time (in seconds) to wait to allow the page to load.
+
+    Returns:
+        A list of dicts, where each dict corresponds to a cookie, from the
+        Selenium Chrome driver.
     """
     if driver is None:
         driver = get_chrome_driver()
@@ -82,7 +108,20 @@ def get_login_cookies(
 
 def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
     """
-    TODO
+    Get an authenticated ``aiohttp`` session using the cookies provided.
+
+    This is achieved by converting cookies from a Selenium driver session
+    to ``http`` module Morsels (see `http.cookies.Morsel`_), which can be
+    added to the ``aiohttp`` session's cookie jar.
+
+    Args:
+        cookies: A list of dicts as returned by :func:`get_login_cookies`,
+            i.e., from a Selenium driver session.
+
+    Returns: An ``aiohttp`` session with the given cookies in its cookie jar.
+
+    .. _`http.cookies.Morsel`:
+        https://docs.python.org/3/library/http.cookies.html#morsel-objects
     """
     logger.debug("Creating aiohttp login session from cookies")
     session = aiohttp.ClientSession()
@@ -114,7 +153,13 @@ async def get_source(
     url: str, session: aiohttp.ClientSession
 ) -> bs4.BeautifulSoup:
     """
-    TODO
+    Get page source of a URL.
+
+    Args:
+        url: URL to visit.
+        session: ``aiohttp`` session.
+
+    Returns: Page source.
     """
     logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
@@ -125,12 +170,35 @@ async def get_source(
 
 async def download_image(
     url: str, session: aiohttp.ClientSession, dst_dir: pathlib.Path
-):
+) -> dict:
     """
+    Attempt to download the image at ``url`` to the directory specified by
+    ``dst_dir``. The downloaded file is named after its MD5 hash to ensure
+    uniqueness. If a file already exists on disk (i.e., has been previously
+    downloaded), it is not rewritten.
+
     Args:
         url: Image URL.
-        session: aiohttp session.
+        session: ``aiohttp`` session.
         dst_dir: Directory to which the image should be downloaded.
+
+    Returns:
+        A dict containing information on the download attempt and, if download
+        was successful, image metadata:
+
+            {
+                "status": {
+                    "get": HTTP response code,
+                    "exists": whether the image already exists on disk (bool),
+                    "valid": whether the file is a valid image file,
+                },
+                "image": {
+                    "url": image download URL,
+                    "filename": downloaded image filename,
+                    "md5_hash": file MD5 hash,
+                    "size": filesize on disk,
+                },
+            }
     """
     if url.startswith("//"):
         url = f"https:{url}"
