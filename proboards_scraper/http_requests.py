@@ -184,7 +184,7 @@ async def download_image(
 
     Returns:
         A dict containing information on the download attempt and, if download
-        was successful, image metadata:
+        was successful, image metadata::
 
             {
                 "status": {
