@@ -17,11 +17,12 @@ def split_url(url: str) -> Tuple[str, str]:
     `board/3/boardname`).
 
     Site/page URLs take the following forms:
-    Homepage: https://yoursite.proboards.com/
-    Board: https://yoursite.proboards.com/board/3/boardname
-    Thread: https://yoursite.proboards.com/thread/123/threadname
-    Users: https://yoursite.proboards.com/members
-    User: https://yoursite.proboards.com/user/10
+
+    * Homepage: https://yoursite.proboards.com/
+    * Board: https://yoursite.proboards.com/board/3/board-name
+    * Thread: https://yoursite.proboards.com/thread/123/thread-title
+    * Users: https://yoursite.proboards.com/members
+    * User: https://yoursite.proboards.com/user/10
 
     Args:
         url: URL to a forum page.
