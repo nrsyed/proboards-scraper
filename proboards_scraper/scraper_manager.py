@@ -4,6 +4,7 @@ import pathlib
 import time
 
 import aiohttp
+import bs4
 import selenium.webdriver
 
 from proboards_scraper.database import Database
@@ -27,26 +28,37 @@ class ScraperManager:
         long_delay_time: float = 20.0
     ):
         """
+        This class has three purposes: 1) to store references to objects that
+        will be used in the process of scraping, 2) to serve as an abstraction
+        layer between the scraper functionality and the database, and 3) to
+        handle HTTP requests (adding delays between requests as needed to
+        avoid throttling) and process the queues (popping items from the queues
+        in the necessary order and inserting them into the database).
+
         Args:
-            db:
-            client_session:
-            content_queue:
-            driver:
-            image_dir:
-            user_queue:
-            request_threshold: After every ``request_threshold`` calls to
-                :meth:`ScraperManager.get_source`, wait ``long_delay_time``
+            db: Database handle.
+            client_session: ``aiohttp`` session.
+            content_queue: Queue to which all content (excluding users) should
+                be added for insertion into the database.
+            driver: Selenium Chrome driver.
+            image_dir: Directory to which downloaded images should be saved.
+            user_queue: Queue to which users should be added for insertion
+                into the database.
+            request_threshold: After every :attr:`request_threshold` calls to
+                :meth:`ScraperManager.get_source`, wait :attr:`long_delay_time`
                 seconds before continuing. This is to prevent request
                 throttling due to a large number of consecutive requests.
             short_delay_time: Number of seconds to wait after each call to
                 :meth:`ScraperManager.get_source` (to help prevent request
                 throttling).
-            long_delay_time: See ``request_threshold``.
+            long_delay_time: See :attr:`request_threshold`.
         """
         self.db = db
         self.client_session = client_session
 
         if driver is None:
+            # Selenium is required to scrape poll content (and, by corollary,
+            # a Selenium driver).
             logger.warning(
                 "Polls cannot be scraped without setting a Chrome webdriver"
             )
@@ -71,7 +83,11 @@ class ScraperManager:
         self.long_delay_time = long_delay_time
         self.request_count = 0
 
-    async def _delay(self):
+    async def _delay(self) -> None:
+        """
+        Asynchronously sleep for an amount of time based on the number of
+        requests, the request threshold, and the short/long delay times.
+        """
         if not self.short_delay_time and not self.long_delay_time:
             return
 
@@ -87,16 +103,23 @@ class ScraperManager:
                 )
         await asyncio.sleep(delay)
 
-    async def download_image(self, url):
+    async def download_image(self, url: str) -> dict:
         """
-        TODO
+        Download an image to :attr:`image_dir`.
+
+        Args:
+            url: URL of the image to be downloaded.
+
+        Returns:
+            Image download status and metadata; see
+            :func:`proboards_scraper.download_image`.
         """
         if "proboards.com" in url:
             await self._delay()
             self.request_count += 1
         return await download_image(url, self.client_session, self.image_dir)
 
-    async def get_source(self, url):
+    async def get_source(self, url: str) -> bs4.BeautifulSoup:
         """
         Wrapper around :func:`proboards_scraper.scraper.get_source` with an
         added short delay via call to :func:`time.sleep` before each
@@ -104,14 +127,26 @@ class ScraperManager:
         calls to :meth:`ScraperManager.get_source`. This rate-limiting is
         performed to help avoid request throttling by the server, which may
         result from a large number of requests in a short period of time.
+
+        Args:
+            url: URL whose page source to retrieve.
+
+        Returns: BeautifulSoup page source object.
         """
         await self._delay()
         self.request_count += 1
         return await get_source(url, self.client_session)
 
-    def insert_guest(self, name):
+    def insert_guest(self, name: str) -> int:
         """
-        TODO
+        Insert a guest user into the database.
+
+        Args:
+            name: The guest's username.
+
+        Returns:
+            The user ID of the guest returned by
+            :meth:`proboards_scraper.database.Database.insert_guest`.
         """
         guest = {
             "id": -1,
@@ -123,14 +158,34 @@ class ScraperManager:
         guest_id = guest_db_obj.id
         return guest_id
 
-    def insert_image(self, image):
+    def insert_image(self, image: dict) -> int:
+        """
+        Insert an image entry into the database.
+
+        Args:
+            image: A dict representing the image entry.
+
+        Returns:
+            The image ID of the image returned by
+            :meth:`proboards_scraper.database.Database.insert_image`.
+        """
         image_db_obj = self.db.insert_image(image)
         image_id = image_db_obj.id
         return image_id
 
-    async def run(self):
+    async def run(self) -> None:
         """
-        TODO
+        Run the scraper, first processing the user queue and then processing
+        the content queue, calling the appropriate database insert/query
+        methods as needed, and closing the Selenium and aiohttp sessions upon
+        completion.
+
+        Because all content (threads, posts, etc.) is associated with users,
+        the content queue is not processed until all users have been added
+        from the user queue (the end of which is marked by a sentinel value).
+        Guest users are an exception, since they are not present in the site's
+        member list; instead, guests are added/queried as they are encountered
+        by calling :meth:`ScraperManager.insert_guest`.
         """
         if self.user_queue is not None:
             all_users_added = False
