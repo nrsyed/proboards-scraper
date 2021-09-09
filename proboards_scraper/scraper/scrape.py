@@ -16,9 +16,15 @@ from proboards_scraper import ScraperManager
 logger = logging.getLogger(__name__)
 
 
-async def scrape_user(url: str, manager: ScraperManager):
+async def scrape_user(url: str, manager: ScraperManager) -> None:
     """
-    TODO
+    Scrape a user profile and add the user to the ScraperManager's user queue
+    (from which the user will be inserted into the database), as well as
+    download the user's avatar and insert the image into the database.
+
+    Args:
+        url: User profile page URL.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
     """
     # Get user id from URL, eg, "https://xyz.proboards.com/user/42" has
     # user id 42. We can exploit os.path.split() to grab everything right
@@ -182,6 +188,20 @@ async def scrape_user(url: str, manager: ScraperManager):
 
 
 def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
+    """
+    Grab all user profile links from the given page source (corresponding to
+    a page of the members list) and return the user profile links as well as
+    the link to the next page of users, if any.
+
+    Args:
+        source: Page source for the members page URL, e.g.,
+            `https://yoursite.proboards.com/members` or
+            `https://yoursite.proboards.com/members?page=2`.
+
+    Returns:
+        A list of user profile links on the current page and the link to the
+        next page of user profiles, if any.
+    """
     # TODO: put this in `scrape_users`.
     member_hrefs = []
     next_href = None
@@ -202,10 +222,15 @@ def scrape_user_urls(source: bs4.BeautifulSoup) -> Tuple[list, str]:
     return member_hrefs, next_href
 
 
-async def scrape_users(url: str, manager: ScraperManager):
+async def scrape_users(url: str, manager: ScraperManager) -> None:
     """
-    url: Members page URL.
-    manager:
+    Asynchronously iterate over all user profile pages and add them to the
+    the ScraperManager user queue for insertion into the database.
+
+    Args:
+        url: Main members page URL, e.g.,
+            `https://yoursite.proboards.com/members`.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
     """
     logger.info(f"Getting user profile URLs from {url}")
 
@@ -238,7 +263,20 @@ async def scrape_users(url: str, manager: ScraperManager):
 async def scrape_poll(
     thread_id: int, poll_container: bs4.element.Tag,
     voters_container: bs4.element.Tag, manager: ScraperManager
-):
+) -> None:
+    """
+    Helper function for :func:`scrape_thread` that parses poll HTML and adds
+    the poll, poll options, and poll voters and related metadata to the
+    ScraperManager content queue for insertion into the database.
+
+    Args:
+        thread_id: Thread ID of the thread to which this poll belongs. Since
+            any given thread can have, at most, one poll, a thread ID can be
+            used to uniquely identify a corresponding poll.
+        poll_container: `BeautifulSoup` HTML container for the poll.
+        voters_container: `BeautifulSoup` HTML container for poll voters.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
+    """
     poll_name = poll_container.find("h3").text.strip()
 
     poll = {
@@ -286,11 +324,14 @@ async def scrape_poll(
         await manager.content_queue.put(poll_voter)
 
 
-async def scrape_thread(url: str, manager: ScraperManager):
+async def scrape_thread(url: str, manager: ScraperManager) -> None:
     """
+    Scrape all pages of a thread, including poll (if any) and all posts,
+    and add them to the content queue for insertion into the database.
+
     Args:
         url: Thread URL.
-        manager:
+        manager: :class:`proboards_scraper.ScraperManager` instance.
     """
     # Get thread id from URL.
     base_url, url_path = split_url(url)
@@ -452,10 +493,14 @@ async def scrape_thread(url: str, manager: ScraperManager):
             post_container = source.find("div", class_="container posts")
 
 
-async def scrape_board(url: str, manager: ScraperManager):
+async def scrape_board(url: str, manager: ScraperManager) -> None:
     """
+    Scrape a board, including all sub-boards (recursively) and all threads,
+    and add them to the content queue for insertion into the database.
+
     Args:
         url: Board page URL.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
     """
     # Board URLs take the form:
     # https://yoursite.proboards.com/board/{id}/{name}
@@ -588,7 +633,15 @@ async def scrape_board(url: str, manager: ScraperManager):
 
 async def scrape_shoutbox(
     shoutbox_container: bs4.element.Tag, manager: ScraperManager
-):
+) -> None:
+    """
+    Scrape the shoutbox on the home page and add all shoutbox posts to the
+    content queue for insertion into the database.
+
+    Args:
+        shoutbox_container: `BeautifulSoup` HTML corresponding to the shoutbox.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
+    """
     shoutbox_posts = shoutbox_container.findAll("div", class_="shoutbox-post")
 
     post_id_expr = r"shoutbox-post-(\d+)"
@@ -615,9 +668,19 @@ async def scrape_shoutbox(
 
 async def scrape_smileys(
     smiley_menu: bs4.element.Tag, manager: ScraperManager
-):
+) -> None:
     """
-    TODO
+    Helper function for :func:`scrape_forum` that grabs all smileys available
+    in the post editor form, downloading the images and adding them to the
+    content queue for insertion into the database. The description for each
+    smiley, which is represented as an image in the `Image` table in the
+    database, is the word "smiley" followed by the emoticon it represents,
+    e.g., `"smiley :)"`.
+
+    Args:
+        smiley_menu: `BeautifulSoup` HTML source corresponding to the smiley
+            menu from a post editor form.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
     """
     for smiley in smiley_menu.findAll("li"):
         img_tag = smiley.find("img")
@@ -632,13 +695,20 @@ async def scrape_smileys(
         await manager.content_queue.put(image)
 
 
-async def scrape_forum(url: str, manager: ScraperManager):
+async def scrape_forum(url: str, manager: ScraperManager) -> None:
     """
-    Scrape the site beginning at the main page, including all categories,
-    boards, and the shoutbox.
+    Recursively scrape the site beginning at the homepage (main forum page),
+    including all categories, boards, smileys, and the shoutbox. These items
+    are added to the `ScraperManager` content queue for insertion into the
+    database.
 
     Args:
-        url: Homepage URL.
+        url: Forum homepage URL.
+        manager: :class:`proboards_scraper.ScraperManager` instance.
+
+    .. note::
+        This function does NOT scrape user profiles. User profiles must
+        be scraped in a separate ``async`` task via :func:`scrape_users`.
     """
     # Use selenium to get the page source because it will load the smileys
     # in the shoutbox post area.
