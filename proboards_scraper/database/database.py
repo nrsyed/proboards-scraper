@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 def serialize(obj):
     """
     TODO
+
+    Args:
+        obj: TODO
+
+    Returns: TODO
     """
     if isinstance(
         obj,
@@ -59,6 +64,8 @@ def serialize(obj):
 class Database:
     def __init__(self, db_path: pathlib.Path):
         """
+        TODO
+
         Args:
             db_path: Path to SQLite database file.
         """
@@ -71,8 +78,10 @@ class Database:
         self.engine = engine
         self.session = session
 
-    def _insert_log_msg(self, item_desc: str, inserted: int):
+    def _insert_log_msg(self, item_desc: str, inserted: int) -> None:
         """
+        TODO
+
         Args:
             item_desc: Item description.
             inserted: Whether the item was updated (2), added (1), or not
@@ -95,6 +104,13 @@ class Database:
         given ``filters`` to determine if it already exists in the database.
         If it doesn't, insert it into the database. Either way, return a bool
         indicating whether the object was added, as well as the object.
+
+        Args:
+            obj: TODO
+            filters: TODO
+            update: TODO
+
+        Returns: TODO
         """
         if filters is None:
             filters = {"id": obj.id}
@@ -120,6 +136,15 @@ class Database:
         return inserted, ret
 
     def insert_avatar(self, avatar_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            avatar_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         avatar = Avatar(**avatar_)
         filters = {
             "image_id": avatar.image_id,
@@ -130,18 +155,45 @@ class Database:
         return avatar
 
     def insert_board(self, board_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            board_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         board = Board(**board_)
         inserted, board = self.insert(board, update=update)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
 
     def insert_category(self, category_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            category_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         category = Category(**category_)
         inserted, category = self.insert(category, update=update)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
     def insert_image(self, image_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            image_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         image = Image(**image_)
 
         # To determine if the image already exists in the database, search by
@@ -158,6 +210,15 @@ class Database:
         return image
 
     def insert_moderator(self, moderator_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            moderator_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         moderator = Moderator(**moderator_)
         filters = {
             "user_id": moderator.user_id,
@@ -173,18 +234,45 @@ class Database:
         return moderator
 
     def insert_poll(self, poll_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            poll_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         poll = Poll(**poll_)
         inserted, poll = self.insert(poll, update=update)
         self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
         return poll
 
     def insert_poll_option(self, poll_option_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            poll_option_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         poll_option = PollOption(**poll_option_)
         inserted, poll_option = self.insert(poll_option, update=update)
         self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
         return poll_option
 
     def insert_poll_voter(self, poll_voter_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            poll_voter_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         poll_voter = PollVoter(**poll_voter_)
         filters = {
             "poll_id": poll_voter.poll_id,
@@ -201,6 +289,15 @@ class Database:
         return poll_voter
 
     def insert_post(self, post_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            post_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         post = Post(**post_)
         inserted, post = self.insert(post, update=update)
         self._insert_log_msg(
@@ -209,18 +306,45 @@ class Database:
         return post
 
     def insert_shoutbox_post(self, shoutbox_post_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            shoutbox_post_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         shoutbox_post = ShoutboxPost(**shoutbox_post_)
         inserted, shoutbox_post = self.insert(shoutbox_post, update=update)
         self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
         return shoutbox_post
 
     def insert_thread(self, thread_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            thread_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         thread = Thread(**thread_)
         inserted, thread = self.insert(thread, update=update)
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
 
     def insert_user(self, user_: dict, update: bool = False):
+        """
+        TODO
+
+        Args:
+            user_: TODO
+            update: TODO
+
+        Returns: TODO
+        """
         user = User(**user_)
         inserted, user = self.insert(user, update=update)
         self._insert_log_msg(f"User {user.name}", inserted)
@@ -228,7 +352,7 @@ class Database:
 
     def insert_guest(self, guest_: dict):
         """
-        Guest users are a special case of `user`. Guests are users who do not
+        Guest users are a special case of :class:`User`. Guests are users who do not
         have a user id or a user profile page. They may include deleted users.
         Since guests may still have posts or threads they've started, they are
         treated as normal users for the purposes of the database, except they
@@ -237,6 +361,11 @@ class Database:
         persistent user id), guests are queried by name. If a guest does not
         already exist in the database, we use the next smallest negative
         integer as its user id.
+
+        Args:
+            guest_: TODO
+
+        Returns: TODO
         """
         guest = User(**guest_)
 
@@ -268,6 +397,11 @@ class Database:
         """
         Return a list of all users if no ``user_num`` provided, or a specific
         user if provided.
+
+        Args:
+            user_id: TODO
+
+        Returns: TODO
         """
         result = self.session.query(User)
 
@@ -280,6 +414,11 @@ class Database:
     def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
         """
         TODO
+
+        Args:
+            board_id: TODO
+
+        Returns: TODO
         """
         result = self.session.query(Board)
 
@@ -298,6 +437,11 @@ class Database:
     def query_threads(self, thread_id: int = None) -> dict:
         """
         TODO
+
+        Args:
+            thread_id: TODO
+
+        Returns: TODO
         """
         result = self.session.query(Thread)
 

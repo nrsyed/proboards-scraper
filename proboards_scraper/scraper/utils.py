@@ -6,6 +6,12 @@ def int_(num: str) -> int:
     """
     Take an integer in the form of a string, remove any commas from it,
     then return it as an ``int``.
+
+    Args:
+        num: A string containing only numeric characters or commas.
+
+    Returns:
+        An integer version of the string.
     """
     return int(num.replace(",", ""))
 
