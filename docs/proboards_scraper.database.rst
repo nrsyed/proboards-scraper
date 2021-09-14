@@ -39,7 +39,27 @@ Module contents
    :members:
    :show-inheritance:
 
+.. autoclass:: Poll
+   :class-doc-from: class
+   :members:
+   :show-inheritance:
+
+.. autoclass:: PollOption
+   :class-doc-from: class
+   :members:
+   :show-inheritance:
+
+.. autoclass:: PollVoter
+   :class-doc-from: class
+   :members:
+   :show-inheritance:
+
 .. autoclass:: Post
+   :class-doc-from: class
+   :members:
+   :show-inheritance:
+
+.. autoclass:: ShoutboxPost
    :class-doc-from: class
    :members:
    :show-inheritance:
