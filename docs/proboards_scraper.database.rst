@@ -29,6 +29,11 @@ Module contents
    :members:
    :show-inheritance:
 
+.. autoclass:: Image
+   :class-doc-from: class
+   :members:
+   :show-inheritance:
+
 .. autoclass:: Moderator
    :class-doc-from: class
    :members:
