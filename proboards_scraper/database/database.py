@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import sqlalchemy
 import sqlalchemy.orm
@@ -207,7 +207,7 @@ class Database:
     def insert_avatar(self, avatar_: dict, update: bool = False) -> Avatar:
         """
         Insert a user avatar into the database; this method wraps
-            :meth:`insert`.
+        :meth:`insert`.
 
         Args:
             avatar_: A dict containing the keyword args (attributes) needed to
@@ -339,7 +339,7 @@ class Database:
     ) -> PollOption:
         """
         Insert a poll option into the database; this method wraps
-            :meth:`insert`.
+        :meth:`insert`.
 
         Args:
             poll_option_: A dict containing the keyword args (attributes)
@@ -359,7 +359,7 @@ class Database:
     ) -> PollVoter:
         """
         Insert a poll voter into the database; this method wraps
-            :meth:`insert`.
+        :meth:`insert`.
 
         Args:
             poll_voter_: A dict containing the keyword args (attributes) needed
@@ -408,7 +408,7 @@ class Database:
     ) -> ShoutboxPost:
         """
         Insert a shoutbox post into the database; this method wraps
-            :meth:`insert`.
+        :meth:`insert`.
 
         Args:
             shoutbox_post_: A dict containing the keyword args (attributes)
@@ -459,20 +459,23 @@ class Database:
 
     def insert_guest(self, guest_: dict) -> User:
         """
-        Guest users are a special case of :class:`User`. Guests are users who do not
-        have a user id or a user profile page. They may include deleted users.
-        Since guests may still have posts or threads they've started, they are
+        Guest users are a special case of :class:`User`. Guests are users who
+        do not have a user id or a user profile page, and may include deleted
+        users. Since there may be posts or threads started by guests, they are
         treated as normal users for the purposes of the database, except they
         are assigned a negative integer user id (which does not exist on the
-        actual site). Because a given guest has only a username (not a
-        persistent user id), guests are queried by name. If a guest does not
-        already exist in the database, we use the next smallest negative
-        integer as its user id.
+        actual forum). Because a given guest has only a username and not a
+        user id, guests are queried by name. If a guest does not already exist
+        in the database, the next smallest negative integer is used as their
+        user id.
 
         Args:
-            guest_: TODO
+            guest_: A dict containing a ``name`` key, corresponding to the
+                guest user's name.
 
-        Returns: TODO
+        Returns:
+            The inserted or existing :class:`User` object corresponding to
+            the guest.
         """
         guest = User(**guest_)
 
@@ -500,15 +503,20 @@ class Database:
         self._insert_log_msg(f"Guest {guest.name}", inserted)
         return guest
 
-    def query_users(self, user_id: int = None) -> Union[List[dict], dict]:
+    def query_users(
+        self, user_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        Return a list of all users if no ``user_num`` provided, or a specific
-        user if provided.
+        Return a list of all users, if no ``user_id`` is provided, or a
+        specific user, if it is provided.
 
         Args:
-            user_id: TODO
+            user_id: A user id, or ``None``.
 
-        Returns: TODO
+        Returns:
+            A dict corresponding to a user in the database (if ``user_id``
+            was provided), else a list of dicts of all users and their ids
+            (if ``user_id`` was not provided).
         """
         result = self.session.query(User)
 
@@ -518,14 +526,21 @@ class Database:
             result = result.all()
         return serialize(result)
 
-    def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
+    def query_boards(
+        self, board_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        TODO
+        Return a list of all boards, if no ``board_id`` is provided, or a
+        list of all threads for the board corresponding to ``board_id`` if it
+        is provided.
 
         Args:
-            board_id: TODO
+            board_id: A board id, or ``None``.
 
-        Returns: TODO
+        Returns:
+            A dict corresponding to all threads in a board (if ``board_id``
+            was provided), else a list of all boards and their ids (if
+            ``board_id`` was not provided).
         """
         result = self.session.query(Board)
 
@@ -541,14 +556,21 @@ class Database:
             result = result.all()
         return serialize(result)
 
-    def query_threads(self, thread_id: int = None) -> dict:
+    def query_threads(
+        self, thread_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        TODO
+        Return a list of all threads and their thread ids, if no ``thread_id``
+        is provided, or a list of all posts in the thread corresponding to
+        ``thread_id`` if it is provided.
 
         Args:
-            thread_id: TODO
+            thread_id: A thread id, or ``None``.
 
-        Returns: TODO
+        Returns:
+            A dict corresponding to all thread titles and their ids (if
+            ``thread_id`` was not provided), else a list of all posts in a
+            thread if ``thread_id`` was provided).
         """
         result = self.session.query(Thread)
 
