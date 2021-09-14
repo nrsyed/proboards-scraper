@@ -204,15 +204,18 @@ class Database:
             ret = result
         return inserted, ret
 
-    def insert_avatar(self, avatar_: dict, update: bool = False):
+    def insert_avatar(self, avatar_: dict, update: bool = False) -> Avatar:
         """
-        TODO
+        Insert a user avatar into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            avatar_: TODO
-            update: TODO
+            avatar_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Avatar` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Avatar` object.
         """
         avatar = Avatar(**avatar_)
         filters = {
@@ -223,45 +226,56 @@ class Database:
         self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
         return avatar
 
-    def insert_board(self, board_: dict, update: bool = False):
+    def insert_board(self, board_: dict, update: bool = False) -> Board:
         """
-        TODO
+        Insert a board into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            board_: TODO
-            update: TODO
+            board_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Board` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Board` object.
         """
         board = Board(**board_)
         inserted, board = self.insert(board, update=update)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
 
-    def insert_category(self, category_: dict, update: bool = False):
+    def insert_category(
+        self, category_: dict, update: bool = False
+    ) -> Category:
         """
-        TODO
+        Insert a category into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            category_: TODO
-            update: TODO
+            category_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Category` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Category` object.
         """
         category = Category(**category_)
         inserted, category = self.insert(category, update=update)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
-    def insert_image(self, image_: dict, update: bool = False):
+    def insert_image(self, image_: dict, update: bool = False) -> Image:
         """
-        TODO
+        Insert an image into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            image_: TODO
-            update: TODO
+            image_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Image` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Image` object.
         """
         image = Image(**image_)
 
@@ -278,15 +292,20 @@ class Database:
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
 
-    def insert_moderator(self, moderator_: dict, update: bool = False):
+    def insert_moderator(
+        self, moderator_: dict, update: bool = False
+    ) -> Moderator:
         """
-        TODO
+        Insert a moderator into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            moderator_: TODO
-            update: TODO
+            moderator_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Moderator` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Moderator` object.
         """
         moderator = Moderator(**moderator_)
         filters = {
@@ -302,45 +321,58 @@ class Database:
         )
         return moderator
 
-    def insert_poll(self, poll_: dict, update: bool = False):
+    def insert_poll(self, poll_: dict, update: bool = False) -> Poll:
         """
-        TODO
+        Insert a poll into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            poll_: TODO
-            update: TODO
+            poll_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Poll` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Poll` object.
         """
         poll = Poll(**poll_)
         inserted, poll = self.insert(poll, update=update)
         self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
         return poll
 
-    def insert_poll_option(self, poll_option_: dict, update: bool = False):
+    def insert_poll_option(
+        self, poll_option_: dict, update: bool = False
+    ) -> PollOption:
         """
-        TODO
+        Insert a poll option into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            poll_option_: TODO
-            update: TODO
+            poll_option_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`PollOption` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`PollOption` object.
         """
         poll_option = PollOption(**poll_option_)
         inserted, poll_option = self.insert(poll_option, update=update)
         self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
         return poll_option
 
-    def insert_poll_voter(self, poll_voter_: dict, update: bool = False):
+    def insert_poll_voter(
+        self, poll_voter_: dict, update: bool = False
+    ) -> PollVoter:
         """
-        TODO
+        Insert a poll voter into the database; this method is a wrapper for
+        :meth:`insert`.
 
         Args:
-            poll_voter_: TODO
-            update: TODO
+            poll_voter_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`PollVoter` object.
+            update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`PollVoter` object.
         """
         poll_voter = PollVoter(**poll_voter_)
         filters = {
@@ -357,13 +389,13 @@ class Database:
         )
         return poll_voter
 
-    def insert_post(self, post_: dict, update: bool = False):
+    def insert_post(self, post_: dict, update: bool = False) -> Post:
         """
         TODO
 
         Args:
             post_: TODO
-            update: TODO
+            update: See :meth:`insert`.
 
         Returns: TODO
         """
@@ -374,13 +406,15 @@ class Database:
             inserted)
         return post
 
-    def insert_shoutbox_post(self, shoutbox_post_: dict, update: bool = False):
+    def insert_shoutbox_post(
+        self, shoutbox_post_: dict, update: bool = False
+    ) -> ShoutboxPost:
         """
         TODO
 
         Args:
             shoutbox_post_: TODO
-            update: TODO
+            update: See :meth:`insert`.
 
         Returns: TODO
         """
@@ -389,13 +423,13 @@ class Database:
         self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
         return shoutbox_post
 
-    def insert_thread(self, thread_: dict, update: bool = False):
+    def insert_thread(self, thread_: dict, update: bool = False) -> Thread:
         """
         TODO
 
         Args:
             thread_: TODO
-            update: TODO
+            update: See :meth:`insert`.
 
         Returns: TODO
         """
@@ -404,13 +438,13 @@ class Database:
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
 
-    def insert_user(self, user_: dict, update: bool = False):
+    def insert_user(self, user_: dict, update: bool = False) -> User:
         """
         TODO
 
         Args:
             user_: TODO
-            update: TODO
+            update: See :meth:`insert`.
 
         Returns: TODO
         """
@@ -419,7 +453,7 @@ class Database:
         self._insert_log_msg(f"User {user.name}", inserted)
         return user
 
-    def insert_guest(self, guest_: dict):
+    def insert_guest(self, guest_: dict) -> User:
         """
         Guest users are a special case of :class:`User`. Guests are users who do not
         have a user id or a user profile page. They may include deleted users.
