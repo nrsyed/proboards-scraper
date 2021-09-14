@@ -206,8 +206,8 @@ class Database:
 
     def insert_avatar(self, avatar_: dict, update: bool = False) -> Avatar:
         """
-        Insert a user avatar into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a user avatar into the database; this method wraps
+            :meth:`insert`.
 
         Args:
             avatar_: A dict containing the keyword args (attributes) needed to
@@ -228,8 +228,7 @@ class Database:
 
     def insert_board(self, board_: dict, update: bool = False) -> Board:
         """
-        Insert a board into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a board into the database; this method wraps :meth:`insert`.
 
         Args:
             board_: A dict containing the keyword args (attributes) needed to
@@ -248,8 +247,7 @@ class Database:
         self, category_: dict, update: bool = False
     ) -> Category:
         """
-        Insert a category into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a category into the database; this method wraps :meth:`insert`.
 
         Args:
             category_: A dict containing the keyword args (attributes) needed
@@ -266,8 +264,7 @@ class Database:
 
     def insert_image(self, image_: dict, update: bool = False) -> Image:
         """
-        Insert an image into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert an image into the database; this method wraps :meth:`insert`.
 
         Args:
             image_: A dict containing the keyword args (attributes) needed
@@ -296,8 +293,7 @@ class Database:
         self, moderator_: dict, update: bool = False
     ) -> Moderator:
         """
-        Insert a moderator into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a moderator into the database; this method wraps :meth:`insert`.
 
         Args:
             moderator_: A dict containing the keyword args (attributes) needed
@@ -323,8 +319,7 @@ class Database:
 
     def insert_poll(self, poll_: dict, update: bool = False) -> Poll:
         """
-        Insert a poll into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a poll into the database; this method wraps :meth:`insert`.
 
         Args:
             poll_: A dict containing the keyword args (attributes) needed
@@ -343,8 +338,8 @@ class Database:
         self, poll_option_: dict, update: bool = False
     ) -> PollOption:
         """
-        Insert a poll option into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a poll option into the database; this method wraps
+            :meth:`insert`.
 
         Args:
             poll_option_: A dict containing the keyword args (attributes)
@@ -363,8 +358,8 @@ class Database:
         self, poll_voter_: dict, update: bool = False
     ) -> PollVoter:
         """
-        Insert a poll voter into the database; this method is a wrapper for
-        :meth:`insert`.
+        Insert a poll voter into the database; this method wraps
+            :meth:`insert`.
 
         Args:
             poll_voter_: A dict containing the keyword args (attributes) needed
@@ -391,13 +386,15 @@ class Database:
 
     def insert_post(self, post_: dict, update: bool = False) -> Post:
         """
-        TODO
+        Insert a post into the database; this method wraps :meth:`insert`.
 
         Args:
-            post_: TODO
+            post_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Post` object.
             update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Post` object.
         """
         post = Post(**post_)
         inserted, post = self.insert(post, update=update)
@@ -410,13 +407,16 @@ class Database:
         self, shoutbox_post_: dict, update: bool = False
     ) -> ShoutboxPost:
         """
-        TODO
+        Insert a shoutbox post into the database; this method wraps
+            :meth:`insert`.
 
         Args:
-            shoutbox_post_: TODO
+            shoutbox_post_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`ShoutboxPost` object.
             update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`ShoutboxPost` object.
         """
         shoutbox_post = ShoutboxPost(**shoutbox_post_)
         inserted, shoutbox_post = self.insert(shoutbox_post, update=update)
@@ -425,13 +425,15 @@ class Database:
 
     def insert_thread(self, thread_: dict, update: bool = False) -> Thread:
         """
-        TODO
+        Insert a thread into the database; this method wraps :meth:`insert`.
 
         Args:
-            thread_: TODO
+            thread_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`Thread` object.
             update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`Thread` object.
         """
         thread = Thread(**thread_)
         inserted, thread = self.insert(thread, update=update)
@@ -440,13 +442,15 @@ class Database:
 
     def insert_user(self, user_: dict, update: bool = False) -> User:
         """
-        TODO
+        Insert a user into the database; this method wraps :meth:`insert`.
 
         Args:
-            user_: TODO
+            user_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`User` object.
             update: See :meth:`insert`.
 
-        Returns: TODO
+        Returns:
+            The inserted (or updated) :class:`User` object.
         """
         user = User(**user_)
         inserted, user = self.insert(user, update=update)
