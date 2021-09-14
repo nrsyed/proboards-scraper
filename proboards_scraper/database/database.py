@@ -6,7 +6,7 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Avatar, Board, Category, Image, Moderator, Poll, PollOption,
+    Base, Avatar, Board, Category, CSS, Image, Moderator, Poll, PollOption,
     PollVoter, Post, ShoutboxPost, Thread, User
 )
 
@@ -64,7 +64,10 @@ def serialize(obj):
 class Database:
     def __init__(self, db_path: pathlib.Path):
         """
-        TODO
+        This class serves as an interface for the SQLite database, and allows
+        items to be inserted/updated or queried using a variety of specific
+        functions that abstract away implementation details of the database
+        and its schema.
 
         Args:
             db_path: Path to SQLite database file.
@@ -100,17 +103,83 @@ class Database:
         update: bool = False
     ) -> Tuple[int, sqlalchemy.orm.DeclarativeMeta]:
         """
-        Query the database for an object of the given ``Metaclass`` using the
-        given ``filters`` to determine if it already exists in the database.
-        If it doesn't, insert it into the database. Either way, return a bool
-        indicating whether the object was added, as well as the object.
+        Query the database for an object of the given sqlalchemy ``Metaclass``
+        using the given ``filters`` to determine if it already exists in the
+        database. If it doesn't, insert it into the database. Either way,
+        return a bool indicating whether the object was added, as well as the
+        resulting object from the query.
+
+        Although this method can be called directly, it is preferable to call
+        the corresponding `insert_*` or `query_*` wrapper methods instead,
+        which simplify the task of querying/inserting into the database.
 
         Args:
-            obj: TODO
-            filters: TODO
-            update: TODO
+            obj: A sqlalchemy ``Metaclass`` instance corresponding to a
+                database table class, i.e., an instance of one of:
 
-        Returns: TODO
+                * :class:`Avatar`
+                * :class:`Board`
+                * :class:`Category`
+                * :class:`CSS`
+                * :class:`Image`
+                * :class:`Moderator`
+                * :class:`Poll`
+                * :class:`PollOption`
+                * :class:`PollVoter`
+                * :class:`Post`
+                * :class:`ShoutboxPost`
+                * :class:`Thread`
+                * :class:`User`
+
+            filters: A dict of key/value pairs on which to filter the query
+                results. The keys should correspond to the attributes of the
+                ``Metaclass``, i.e., attributes of the ``obj`` argument class.
+                See example below. If ``filters`` is ``None``, it defaults to
+                the ``id`` attribute of ``obj``, i.e., ``obj.id``.
+            update: Whether to update the database entry if the queried object
+                already exists.
+
+        Example:
+            The following example demonstrates how to insert a new user into
+            the database. Note that we first create an instance of the user
+            (which is passed to :meth:`insert`) and filter by the user id
+            (which is the :class:`User` table primary key). In other words,
+            this searches the database for an existing user with the given
+            filter (i.e., the user with id 7) and, if the user doesn't exist,
+            inserts it into the database, then returns the inserted object:
+
+            .. code-block:: python
+
+                user_data = {
+                    "id": 7,
+                    "date_registered": 1631019126,
+                    "email": "foo@bar.com",
+                    "name": "Snake Plissken",
+                    "username": "snake",
+                }
+                
+                new_user = User(**user_data)
+                
+                db = Database("forum.db")
+                inserted, new_user = db.insert(
+                    new_user,
+                    filters={"id": 7}
+                )
+
+        Returns:
+            inserted, ret
+
+            * inserted:
+                An integer code denoting insert status.
+
+                * 0: The object failed to be inserted or updated.
+                * 1: ``obj`` was inserted into the database.
+                * 2: ``obj`` existed in the database and was updated.
+            * ret:
+                The inserted object, if the object didn't previously
+                exist in the database, or the existing object if it did
+                already exist. It is effectively an updated version of
+                ``obj``.
         """
         if filters is None:
             filters = {"id": obj.id}
