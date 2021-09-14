@@ -57,19 +57,25 @@ def run_scraper(
     actually run the scraper (with all the default settings).
 
     Args:
-        url: URL of the the page to scrape. If the URL is that of the forum
-            homepage (e.g., `https://yoursite.proboards.com/`), the entire site
-            (including users, shoutbox, category/board/thread/post content,
-            etc.) will be scraped; if it is the URL for the members page
-            (e.g., `https://yoursite.proboards.com/members`), only the users
-            will be scraped; if it is the URL for a specific user profile
-            (e.g., `https://yoursite.proboards.com/user/10`), only that
-            particular user will be scraped; if it is the URL for a board
-            (e.g., `https://yoursite.proboards.com/board/3/board-name`),
-            only that particular board and its threads/posts will be
-            scraped; if it is the URL for a thread
-            (e.g., `https://yoursite.proboards.com/thread/1234/thread-title`)
-            only that particular thread and its posts will be scraped.
+        url: URL of the the page to scrape.
+
+            * If the URL is that of the forum homepage (e.g.,
+              `https://yoursite.proboards.com/`), the entire site
+              (including users, shoutbox, category/board/thread/post content,
+              etc.) will be scraped.
+            * If it is the URL for the members page
+              (e.g., `https://yoursite.proboards.com/members`), only the users
+              will be scraped; if it is the URL for a specific user profile
+              (e.g., `https://yoursite.proboards.com/user/10`), only that
+              particular user will be scraped.
+            * If it is the URL for a board
+              (e.g., `https://yoursite.proboards.com/board/3/board-name`),
+              only that particular board and its threads/posts will be
+              scraped.
+            * If it is the URL for a thread
+              (e.g., `https://yoursite.proboards.com/thread/1234/thread-title`)
+              only that particular thread and its posts will be scraped.
+
         dst_dir: Directory in which to place the resulting files. The database
             file is written to ``<dst_dir>/forum.db`` and image files are
             saved to ``<dst_dir>/images``.

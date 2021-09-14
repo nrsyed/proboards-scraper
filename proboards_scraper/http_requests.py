@@ -34,7 +34,8 @@ def get_chrome_driver() -> selenium.webdriver.Chrome:
     Returns an instance of a Selenium Chrome driver with the headless
     option set to ``True``.
 
-    Returns: headless Chrome driver.
+    Returns:
+        Headless Chrome driver.
     """
     chrome_opts = selenium.webdriver.ChromeOptions()
     chrome_opts.headless = True
@@ -118,7 +119,8 @@ def get_login_session(cookies: List[dict]) -> aiohttp.ClientSession:
         cookies: A list of dicts as returned by :func:`get_login_cookies`,
             i.e., from a Selenium driver session.
 
-    Returns: An ``aiohttp`` session with the given cookies in its cookie jar.
+    Returns:
+        An ``aiohttp`` session with the given cookies in its cookie jar.
 
     .. _`http.cookies.Morsel`:
         https://docs.python.org/3/library/http.cookies.html#morsel-objects
@@ -159,7 +161,8 @@ async def get_source(
         url: URL to visit.
         session: ``aiohttp`` session.
 
-    Returns: Page source.
+    Returns:
+        Page source.
     """
     logger.debug(f"Getting page source for {url}")
     # TODO: check response HTTP status code
