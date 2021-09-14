@@ -121,7 +121,7 @@ class ScraperManager:
 
     async def get_source(self, url: str) -> bs4.BeautifulSoup:
         """
-        Wrapper around :func:`proboards_scraper.scraper.get_source` with an
+        Wrapper around :func:`proboards_scraper.get_source` with an
         added short delay via call to :func:`time.sleep` before each
         request, and a longer delay after every ``self.request_threshold``
         calls to :meth:`ScraperManager.get_source`. This rate-limiting is
