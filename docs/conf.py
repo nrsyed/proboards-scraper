@@ -96,6 +96,8 @@ def process_type(x: Union[dict, str]):
                     "selenium.webdriver.Chrome",
                 "proboards_scraper.database.database.Database":
                     "proboards_scraper.database.Database",
+                "proboards_scraper.database.schema":
+                    "proboards_scraper.database",
                 "proboards_scraper.scraper_manager.ScraperManager":
                     "proboards_scraper.ScraperManager",
                 "typing.": "",
