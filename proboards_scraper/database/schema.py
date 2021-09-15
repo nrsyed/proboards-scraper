@@ -345,7 +345,7 @@ class User(Base):
         date_registered (int): Unix timestamp.
         email (str): User email.
         instant_messengers (str): Optional; a string consisting of
-            semicolon-delimited "messenger_name:screen_name" pairs, eg,
+            semicolon-delimited `messenger_name:screen_name` pairs, eg,
             ``"AIM:ssj_goku12;ICQ:12345;YIM:duffman20"``.
         gender (str): Optional ("Male"/"Female"/"Other").
         group (str): Group/rank (eg, "Regular Membership", "Global Moderator").

@@ -103,7 +103,7 @@ class Database:
         update: bool = False
     ) -> Tuple[int, sqlalchemy.orm.DeclarativeMeta]:
         """
-        Query the database for an object of the given sqlalchemy ``Metaclass``
+        Query the database for an object of the given sqlalchemy Metaclass
         using the given ``filters`` to determine if it already exists in the
         database. If it doesn't, insert it into the database. Either way,
         return a bool indicating whether the object was added, as well as the
@@ -114,7 +114,7 @@ class Database:
         which simplify the task of querying/inserting into the database.
 
         Args:
-            obj: A sqlalchemy ``Metaclass`` instance corresponding to a
+            obj: A sqlalchemy Metaclass instance corresponding to a
                 database table class, i.e., an instance of one of:
 
                 * :class:`Avatar`
@@ -133,7 +133,7 @@ class Database:
 
             filters: A dict of key/value pairs on which to filter the query
                 results. The keys should correspond to the attributes of the
-                ``Metaclass``, i.e., attributes of the ``obj`` argument class.
+                Metaclass, i.e., attributes of the ``obj`` argument class.
                 See example below. If ``filters`` is ``None``, it defaults to
                 the ``id`` attribute of ``obj``, i.e., ``obj.id``.
             update: Whether to update the database entry if the queried object
