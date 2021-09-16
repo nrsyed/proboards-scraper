@@ -7,15 +7,20 @@ from pprint import pprint
 import proboards_scraper
 
 
-def configure_logging(verbosity: int = 2):
+def configure_logging(verbosity: int = 2) -> None:
     """
-    Verbosity levels:
-    0: silent (only show CRITICAL)
-    1: quiet (show proboards_scraper ERROR, imported module ERROR)
-    2: normal (show proboards_scraper INFO, imported module ERROR)
-    3: verbose (show proboards_scraper DEBUG, imported module ERROR)
-    4: vverbose (show proboards_scraper DEBUG, imported module INFO)
-    5: vvverbose (show proboards_scraper DEBUG, imported module DEBUG)
+    Configure the root logger and set the verbosity level on a per-module
+    basis as desired.
+
+    Args:
+        verbosity: One of the following options:
+
+            * 0: silent (only show CRITICAL)
+            * 1: quiet (show proboards_scraper ERROR, imported module ERROR)
+            * 2: normal (show proboards_scraper INFO, imported module ERROR)
+            * 3: verbose (show proboards_scraper DEBUG, imported module ERROR)
+            * 4: vverbose (show proboards_scraper DEBUG, imported module INFO)
+            * 5: vvverbose (show proboards_scraper DEBUG, imported module DEBUG)
 
     """
     datetime_fmt = "%Y-%m-%d-%H-%M-%S"
@@ -58,7 +63,7 @@ def configure_logging(verbosity: int = 2):
 
 def pbs_cli():
     """
-    Entrypoint for ``pbs`` (proboards scraper) tool.
+    Entrypoint for the main ``pbs`` (proboards scraper) tool.
     """
     parser = argparse.ArgumentParser()
 
