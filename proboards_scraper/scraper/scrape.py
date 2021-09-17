@@ -24,7 +24,7 @@ async def scrape_user(url: str, manager: ScraperManager) -> None:
 
     Args:
         url: User profile page URL.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
     """
     # Get user id from URL, eg, "https://xyz.proboards.com/user/42" has
     # user id 42. We can exploit os.path.split() to grab everything right
@@ -230,7 +230,7 @@ async def scrape_users(url: str, manager: ScraperManager) -> None:
     Args:
         url: Main members page URL, e.g.,
             `https://yoursite.proboards.com/members`.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
     """
     logger.info(f"Getting user profile URLs from {url}")
 
@@ -273,9 +273,9 @@ async def scrape_poll(
         thread_id: Thread ID of the thread to which this poll belongs. Since
             any given thread can have, at most, one poll, a thread ID can be
             used to uniquely identify a corresponding poll.
-        poll_container: `BeautifulSoup` HTML container for the poll.
-        voters_container: `BeautifulSoup` HTML container for poll voters.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        poll_container: BeautifulSoup HTML container for the poll.
+        voters_container: BeautifulSoup HTML container for poll voters.
+        manager: ScraperManager instance.
     """
     poll_name = poll_container.find("h3").text.strip()
 
@@ -331,7 +331,7 @@ async def scrape_thread(url: str, manager: ScraperManager) -> None:
 
     Args:
         url: Thread URL.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
     """
     # Get thread id from URL.
     base_url, url_path = split_url(url)
@@ -500,7 +500,7 @@ async def scrape_board(url: str, manager: ScraperManager) -> None:
 
     Args:
         url: Board page URL.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
     """
     # Board URLs take the form:
     # https://yoursite.proboards.com/board/{id}/{name}
@@ -639,8 +639,8 @@ async def scrape_shoutbox(
     content queue for insertion into the database.
 
     Args:
-        shoutbox_container: `BeautifulSoup` HTML corresponding to the shoutbox.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        shoutbox_container: BeautifulSoup HTML corresponding to the shoutbox.
+        manager: ScraperManager instance.
     """
     shoutbox_posts = shoutbox_container.findAll("div", class_="shoutbox-post")
 
@@ -678,9 +678,9 @@ async def scrape_smileys(
     e.g., `"smiley :)"`.
 
     Args:
-        smiley_menu: `BeautifulSoup` HTML source corresponding to the smiley
+        smiley_menu: BeautifulSoup HTML source corresponding to the smiley
             menu from a post editor form.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
     """
     for smiley in smiley_menu.findAll("li"):
         img_tag = smiley.find("img")
@@ -699,12 +699,12 @@ async def scrape_forum(url: str, manager: ScraperManager) -> None:
     """
     Recursively scrape the site beginning at the homepage (main forum page),
     including all categories, boards, smileys, and the shoutbox. These items
-    are added to the `ScraperManager` content queue for insertion into the
+    are added to the ScraperManager content queue for insertion into the
     database.
 
     Args:
         url: Forum homepage URL.
-        manager: :class:`proboards_scraper.ScraperManager` instance.
+        manager: ScraperManager instance.
 
     .. note::
         This function does NOT scrape user profiles. User profiles must

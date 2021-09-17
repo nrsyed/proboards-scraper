@@ -71,8 +71,8 @@ def run_scraper(
               particular user will be scraped.
             * If it is the URL for a board
               (e.g., `https://yoursite.proboards.com/board/3/board-name`),
-              only that particular board and its threads/posts will be
-              scraped.
+              only that particular board and its threads/posts/sub-boards
+              will be scraped.
             * If it is the URL for a thread
               (e.g., `https://yoursite.proboards.com/thread/1234/thread-title`)
               only that particular thread and its posts will be scraped.

@@ -18,9 +18,10 @@ def int_(num: str) -> int:
 
 def split_url(url: str) -> Tuple[str, str]:
     """
-    Given a forum page URL, return the base URL (e.g.,
-    `https://yoursite.proboards.com`) and resource path component (e.g.,
-    `board/3/board-name`).
+    Given a forum page URL like, e.g.,
+    `https://yoursite.proboards.com/board/3/board-name`, return the base URL
+    (`https://yoursite.proboards.com`) and resource path component
+    (`board/3/board-name`).
 
     Site/page URLs take the following forms:
 
@@ -34,6 +35,8 @@ def split_url(url: str) -> Tuple[str, str]:
         url: URL to a forum page.
 
     Returns:
+        ``(base_url, path)``
+
         The base URL and resource path URL component (or ``None`` if ``url``
         is just the base/homepage URL).
     """

@@ -131,7 +131,8 @@ class ScraperManager:
         Args:
             url: URL whose page source to retrieve.
 
-        Returns: BeautifulSoup page source object.
+        Returns:
+            BeautifulSoup page source object.
         """
         await self._delay()
         self.request_count += 1
