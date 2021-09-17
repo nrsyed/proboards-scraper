@@ -210,7 +210,7 @@ class Database:
         :meth:`insert`.
 
         Args:
-            avatar_: A dict containing the keyword args (attributes) needed to
+            avatar\_: A dict containing the keyword args (attributes) needed to
                 instantiate a :class:`Avatar` object.
             update: See :meth:`insert`.
 
@@ -231,7 +231,7 @@ class Database:
         Insert a board into the database; this method wraps :meth:`insert`.
 
         Args:
-            board_: A dict containing the keyword args (attributes) needed to
+            board\_: A dict containing the keyword args (attributes) needed to
                 instantiate a :class:`Board` object.
             update: See :meth:`insert`.
 
@@ -250,7 +250,7 @@ class Database:
         Insert a category into the database; this method wraps :meth:`insert`.
 
         Args:
-            category_: A dict containing the keyword args (attributes) needed
+            category\_: A dict containing the keyword args (attributes) needed
                 to instantiate a :class:`Category` object.
             update: See :meth:`insert`.
 
@@ -267,7 +267,7 @@ class Database:
         Insert an image into the database; this method wraps :meth:`insert`.
 
         Args:
-            image_: A dict containing the keyword args (attributes) needed
+            image\_: A dict containing the keyword args (attributes) needed
                 to instantiate a :class:`Image` object.
             update: See :meth:`insert`.
 
@@ -296,7 +296,7 @@ class Database:
         Insert a moderator into the database; this method wraps :meth:`insert`.
 
         Args:
-            moderator_: A dict containing the keyword args (attributes) needed
+            moderator\_: A dict containing the keyword args (attributes) needed
                 to instantiate a :class:`Moderator` object.
             update: See :meth:`insert`.
 
@@ -322,7 +322,7 @@ class Database:
         Insert a poll into the database; this method wraps :meth:`insert`.
 
         Args:
-            poll_: A dict containing the keyword args (attributes) needed
+            poll\_: A dict containing the keyword args (attributes) needed
                 to instantiate a :class:`Poll` object.
             update: See :meth:`insert`.
 
@@ -342,7 +342,7 @@ class Database:
         :meth:`insert`.
 
         Args:
-            poll_option_: A dict containing the keyword args (attributes)
+            poll_option\_: A dict containing the keyword args (attributes)
                 needed to instantiate a :class:`PollOption` object.
             update: See :meth:`insert`.
 
@@ -362,7 +362,7 @@ class Database:
         :meth:`insert`.
 
         Args:
-            poll_voter_: A dict containing the keyword args (attributes) needed
+            poll_voter\_: A dict containing the keyword args (attributes) needed
                 to instantiate a :class:`PollVoter` object.
             update: See :meth:`insert`.
 
@@ -389,7 +389,7 @@ class Database:
         Insert a post into the database; this method wraps :meth:`insert`.
 
         Args:
-            post_: A dict containing the keyword args (attributes) needed to
+            post\_: A dict containing the keyword args (attributes) needed to
                 instantiate a :class:`Post` object.
             update: See :meth:`insert`.
 
@@ -411,7 +411,7 @@ class Database:
         :meth:`insert`.
 
         Args:
-            shoutbox_post_: A dict containing the keyword args (attributes)
+            shoutbox_post\_: A dict containing the keyword args (attributes)
                 needed to instantiate a :class:`ShoutboxPost` object.
             update: See :meth:`insert`.
 
@@ -428,7 +428,7 @@ class Database:
         Insert a thread into the database; this method wraps :meth:`insert`.
 
         Args:
-            thread_: A dict containing the keyword args (attributes)
+            thread\_: A dict containing the keyword args (attributes)
                 needed to instantiate a :class:`Thread` object.
             update: See :meth:`insert`.
 
@@ -445,7 +445,7 @@ class Database:
         Insert a user into the database; this method wraps :meth:`insert`.
 
         Args:
-            user_: A dict containing the keyword args (attributes)
+            user\_: A dict containing the keyword args (attributes)
                 needed to instantiate a :class:`User` object.
             update: See :meth:`insert`.
 
@@ -470,7 +470,7 @@ class Database:
         user id.
 
         Args:
-            guest_: A dict containing a ``name`` key, corresponding to the
+            guest\_: A dict containing a ``name`` key, corresponding to the
                 guest user's name.
 
         Returns:
