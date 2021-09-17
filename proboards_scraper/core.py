@@ -65,7 +65,8 @@ def run_scraper(
               etc.) will be scraped.
             * If it is the URL for the members page
               (e.g., `https://yoursite.proboards.com/members`), only the users
-              will be scraped; if it is the URL for a specific user profile
+              will be scraped.
+            * If it is the URL for a specific user profile
               (e.g., `https://yoursite.proboards.com/user/10`), only that
               particular user will be scraped.
             * If it is the URL for a board
