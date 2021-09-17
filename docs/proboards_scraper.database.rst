@@ -1,9 +1,6 @@
 proboards\_scraper.database
 ===========================
 
-Module contents
----------------
-
 .. module:: proboards_scraper.database
 
 .. autoclass:: Database
