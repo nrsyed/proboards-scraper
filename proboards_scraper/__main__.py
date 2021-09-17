@@ -81,7 +81,7 @@ def pbs_cli():
     )
 
     parser.add_argument(
-        "-o", "--output", type=pathlib.Path, default="site",
+        "-o", "--output", type=pathlib.Path, default="site", metavar="<path>",
         help="Path to output directory containing database and site files"
         " (default ./site)"
     )
@@ -126,20 +126,23 @@ def pbd_cli():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d", "--database", type=str, default="site/forum.db",
-        help="Path to database file"
+        metavar="<path>", help="Path to database file"
     )
 
     # One actions must be chosen. The value of `0` is used to indicate that
     # that a given action was NOT provided.
     actions = parser.add_mutually_exclusive_group(required=True)
     actions.add_argument(
-        "--user", "-u", nargs="?", type=int, default=0, const=None
+        "--user", "-u", nargs="?", type=int, default=0, const=None,
+        metavar="user_id"
     )
     actions.add_argument(
-        "--board", "-b", nargs="?", type=int, default=0, const=None
+        "--board", "-b", nargs="?", type=int, default=0, const=None,
+        metavar="board_id"
     )
     actions.add_argument(
-        "--thread", "-t", nargs="?", type=int, default=0, const=None
+        "--thread", "-t", nargs="?", type=int, default=0, const=None,
+        metavar="thread_id"
     )
     args = vars(parser.parse_args())
 
