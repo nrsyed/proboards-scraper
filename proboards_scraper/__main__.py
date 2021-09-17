@@ -133,12 +133,12 @@ def pbd_cli():
     # that a given action was NOT provided.
     actions = parser.add_mutually_exclusive_group(required=True)
     actions.add_argument(
-        "--user", "-u", nargs="?", type=int, default=0, const=None,
-        metavar="user_id"
-    )
-    actions.add_argument(
         "--board", "-b", nargs="?", type=int, default=0, const=None,
         metavar="board_id"
+    )
+    actions.add_argument(
+        "--user", "-u", nargs="?", type=int, default=0, const=None,
+        metavar="user_id"
     )
     actions.add_argument(
         "--thread", "-t", nargs="?", type=int, default=0, const=None,
