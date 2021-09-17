@@ -35,5 +35,73 @@ Usage
     -p PASSWORD, --password PASSWORD
                           Login password
 
+Required arguments
+------------------
+
+* ``url``: The URL for the forum homepage, users page, a user profile, a board,
+  or a thread to be scraped. See the ``url`` parameter of
+  :func:`proboards_scraper.run_scraper` for more information.
+
+Optional arguments
+------------------
+
+* ``-u``/``--username``: Optional login username; must be used with
+  ``--password``. Login credentials are optional, but password-protected or
+  members-only pages cannot be accessed without them.
+
+* ``-p``/``--password``: See ``--username``.
+
+* ``-o``/``--output``: Path to the output directory where the database and
+  any downloaded files (e.g., images) will be written. The SQLite database
+  file will written to `forum.db`, images will be written to a subdirectory
+  named `images`, and scraper logging output will be written to a subdirectory
+  named `logs`.
+
+* ``-D``/``--no-delay``: This flag disables rate-limiting by the scraper.
+  See the ``request_threshold``, ``short_delay_time``, and ``long_delay_time``
+  attributes of :class:`proboards_scraper.ScraperManager` for more
+  information on rate-limiting values and behavior.
+
+* ``-U``/``--no-users``: This flag disables the users page from being scraped
+  when the forum homepage URL is given for ``url``. This might be desirable if
+  a previous attempt to scrape the site was interrupted (after all users from
+  the members page have been scraped but before scraping of the rest of the
+  site completed) to avoid going through the user profiles again.
+
+* ``-v``/``--verbosity``: This argument controls the amount of logging output.
+  The logging behavior is defined in
+  :func:`proboards_scraper.__main__.configure_logging`.
+
+
 Examples
 --------
+
+**Scrape the entire forum:**
+
+.. code-block:: none
+
+  pbs https://yoursite.proboards.com -u user -p pass
+
+**Scrape all user profiles:**
+
+.. code-block:: none
+
+  pbs https://yoursite.proboards.com/members -u user -p pass
+
+**Scrape a specific user's profile:**
+
+.. code-block:: none
+
+  pbs https://yoursite.proboards.com/user/4 -u user -p pass
+
+**Scrape a specific board (including all its threads and sub-boards):**
+
+.. code-block:: none
+
+  pbs https://yoursite.proboards.com/board/2/boardname -u user -p pass
+
+**Scrape a specific thread:**
+
+.. code-block:: none
+
+  pbs https://yoursite.proboards.com/thread/123/thread-title -u user -p pass
