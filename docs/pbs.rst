@@ -22,7 +22,7 @@ Usage
                           Path to output directory containing database and
                           site files (default ./site)
     -D, --no-delay        Do not rate limit requests
-    -U, --no-users        Do not grab user profiles (only use this options if
+    -U, --no-users        Do not grab user profiles (only use this option if
                           a database exists and users have already been added
                           to it)
     -v {0,1,2,3,4,5}, --verbosity {0,1,2,3,4,5}

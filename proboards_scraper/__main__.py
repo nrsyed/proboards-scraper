@@ -91,7 +91,7 @@ def pbs_cli():
     )
     parser.add_argument(
         "-U", "--no-users", action="store_true", dest="skip_users",
-        help="Do not grab user profiles (only use this options if a database "
+        help="Do not grab user profiles (only use this option if a database "
         "exists and users have already been added to it)"
     )
     parser.add_argument(
