@@ -1,5 +1,12 @@
 # ProBoards Forum Scraper
 
+
+Refer to the [complete documentation](https://nrsyed.github.io/proboards-scraper)
+for more detailed information.
+
+
+# README table of contents
+
 * [Disclaimer](#disclaimer)
 * [Overview](#overview)
 * [Installation](#installation)
