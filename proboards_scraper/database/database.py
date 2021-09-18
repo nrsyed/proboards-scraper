@@ -14,14 +14,31 @@ from .schema import (
 logger = logging.getLogger(__name__)
 
 
-def serialize(obj):
+def serialize(
+    obj: Union[sqlalchemy.orm.DeclarativeMeta, list]
+) -> Union[dict, List[dict]]:
     """
-    TODO
+    Helper function that recursively serializes a database table object
+    (or list of objects) and returns them as Python dictionaries.
 
     Args:
-        obj: TODO
+        obj: A sqlalchemy Metaclass instance, i.e., one of:
 
-    Returns: TODO
+            * :class:`Avatar`
+            * :class:`Board`
+            * :class:`Category`
+            * :class:`CSS`
+            * :class:`Image`
+            * :class:`Moderator`
+            * :class:`Poll`
+            * :class:`PollOption`
+            * :class:`PollVoter`
+            * :class:`Post`
+            * :class:`ShoutboxPost`
+            * :class:`Thread`
+            * :class:`User`
+
+    Returns: Serialized version of the object (or list of objects).
     """
     if isinstance(
         obj,
@@ -511,12 +528,16 @@ class Database:
         specific user, if it is provided.
 
         Args:
-            user_id: A user id, or ``None``.
+            user_id: A user id (optional).
 
         Returns:
             A dict corresponding to a user in the database (if ``user_id``
-            was provided), else a list of dicts of all users and their ids
-            (if ``user_id`` was not provided).
+            was provided), else a list of dicts of all users (if ``user_id``
+            was not provided).
+
+        .. note::
+            The returned :class:`User` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(User)
 
@@ -530,17 +551,20 @@ class Database:
         self, board_id: Optional[int] = None
     ) -> Union[List[dict], dict]:
         """
-        Return a list of all boards, if no ``board_id`` is provided, or a
-        list of all threads for the board corresponding to ``board_id`` if it
-        is provided.
+        Return a list of all boards if no ``board_id`` is provided or a
+        specific board if it is provided.
 
         Args:
-            board_id: A board id, or ``None``.
+            board_id: A board id (optional).
 
         Returns:
-            A dict corresponding to all threads in a board (if ``board_id``
-            was provided), else a list of all boards and their ids (if
-            ``board_id`` was not provided).
+            A dict corresponding to a board in the database (if ``board_id``
+            was provided), else a list of dicts of all boards (if ``board_id``
+            was not provided).
+
+        .. note::
+            The returned :class:`Board` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(Board)
 
@@ -560,17 +584,20 @@ class Database:
         self, thread_id: Optional[int] = None
     ) -> Union[List[dict], dict]:
         """
-        Return a list of all threads and their thread ids, if no ``thread_id``
-        is provided, or a list of all posts in the thread corresponding to
-        ``thread_id`` if it is provided.
+        Return a list of all threads if no ``thread_id`` is provided or a
+        specific thread if it is provided.
 
         Args:
-            thread_id: A thread id, or ``None``.
+            thread_id: A thread id (optional).
 
         Returns:
-            A dict corresponding to all thread titles and their ids (if
-            ``thread_id`` was not provided), else a list of all posts in a
-            thread if ``thread_id`` was provided).
+            A dict corresponding to a thread in the database (if ``thread_id``
+            was provided), else a list of dicts of all threads (if
+            ``thread_id`` was not provided).
+
+        .. note::
+            The returned :class:`Thread` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(Thread)
 
