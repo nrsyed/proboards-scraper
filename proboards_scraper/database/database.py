@@ -1,12 +1,12 @@
 import logging
 import pathlib
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from .schema import (
-    Base, Avatar, Board, Category, Image, Moderator, Poll, PollOption,
+    Base, Avatar, Board, Category, CSS, Image, Moderator, Poll, PollOption,
     PollVoter, Post, ShoutboxPost, Thread, User
 )
 
@@ -14,9 +14,31 @@ from .schema import (
 logger = logging.getLogger(__name__)
 
 
-def serialize(obj):
+def serialize(
+    obj: Union[sqlalchemy.orm.DeclarativeMeta, list]
+) -> Union[dict, List[dict]]:
     """
-    TODO
+    Helper function that recursively serializes a database table object
+    (or list of objects) and returns them as Python dictionaries.
+
+    Args:
+        obj: A sqlalchemy Metaclass instance, i.e., one of:
+
+            * :class:`Avatar`
+            * :class:`Board`
+            * :class:`Category`
+            * :class:`CSS`
+            * :class:`Image`
+            * :class:`Moderator`
+            * :class:`Poll`
+            * :class:`PollOption`
+            * :class:`PollVoter`
+            * :class:`Post`
+            * :class:`ShoutboxPost`
+            * :class:`Thread`
+            * :class:`User`
+
+    Returns: Serialized version of the object (or list of objects).
     """
     if isinstance(
         obj,
@@ -59,6 +81,11 @@ def serialize(obj):
 class Database:
     def __init__(self, db_path: pathlib.Path):
         """
+        This class serves as an interface for the SQLite database, and allows
+        items to be inserted/updated or queried using a variety of specific
+        functions that abstract away implementation details of the database
+        and its schema.
+
         Args:
             db_path: Path to SQLite database file.
         """
@@ -71,8 +98,10 @@ class Database:
         self.engine = engine
         self.session = session
 
-    def _insert_log_msg(self, item_desc: str, inserted: int):
+    def _insert_log_msg(self, item_desc: str, inserted: int) -> None:
         """
+        TODO
+
         Args:
             item_desc: Item description.
             inserted: Whether the item was updated (2), added (1), or not
@@ -91,10 +120,83 @@ class Database:
         update: bool = False
     ) -> Tuple[int, sqlalchemy.orm.DeclarativeMeta]:
         """
-        Query the database for an object of the given ``Metaclass`` using the
-        given ``filters`` to determine if it already exists in the database.
-        If it doesn't, insert it into the database. Either way, return a bool
-        indicating whether the object was added, as well as the object.
+        Query the database for an object of the given sqlalchemy Metaclass
+        using the given ``filters`` to determine if it already exists in the
+        database. If it doesn't, insert it into the database. Either way,
+        return a bool indicating whether the object was added, as well as the
+        resulting object from the query.
+
+        Although this method can be called directly, it is preferable to call
+        the corresponding `insert_*` or `query_*` wrapper methods instead,
+        which simplify the task of querying/inserting into the database.
+
+        Args:
+            obj: A sqlalchemy Metaclass instance corresponding to a
+                database table class, i.e., an instance of one of:
+
+                * :class:`Avatar`
+                * :class:`Board`
+                * :class:`Category`
+                * :class:`CSS`
+                * :class:`Image`
+                * :class:`Moderator`
+                * :class:`Poll`
+                * :class:`PollOption`
+                * :class:`PollVoter`
+                * :class:`Post`
+                * :class:`ShoutboxPost`
+                * :class:`Thread`
+                * :class:`User`
+
+            filters: A dict of key/value pairs on which to filter the query
+                results. The keys should correspond to the attributes of the
+                Metaclass, i.e., attributes of the ``obj`` argument class.
+                See example below. If ``filters`` is ``None``, it defaults to
+                the ``id`` attribute of ``obj``, i.e., ``obj.id``.
+            update: Whether to update the database entry if the queried object
+                already exists.
+
+        Example:
+            The following example demonstrates how to insert a new user into
+            the database. Note that we first create an instance of the user
+            (which is passed to :meth:`insert`) and filter by the user id
+            (which is the :class:`User` table primary key). In other words,
+            this searches the database for an existing user with the given
+            filter (i.e., the user with id 7) and, if the user doesn't exist,
+            inserts it into the database, then returns the inserted object:
+
+            .. code-block:: python
+
+                user_data = {
+                    "id": 7,
+                    "date_registered": 1631019126,
+                    "email": "foo@bar.com",
+                    "name": "Snake Plissken",
+                    "username": "snake",
+                }
+                
+                new_user = User(**user_data)
+                
+                db = Database("forum.db")
+                inserted, new_user = db.insert(
+                    new_user,
+                    filters={"id": 7}
+                )
+
+        Returns:
+            :data:`(inserted, ret)`
+
+            * inserted:
+                An integer code denoting insert status.
+
+                * 0: The object failed to be inserted or updated.
+                * 1: ``obj`` was inserted into the database.
+                * 2: ``obj`` existed in the database and was updated.
+            * ret:
+                The inserted object, if the object didn't previously
+                exist in the database, or the existing object if it did
+                already exist. It is effectively an updated version of
+                ``obj``.
         """
         if filters is None:
             filters = {"id": obj.id}
@@ -119,7 +221,19 @@ class Database:
             ret = result
         return inserted, ret
 
-    def insert_avatar(self, avatar_: dict, update: bool = False):
+    def insert_avatar(self, avatar_: dict, update: bool = False) -> Avatar:
+        """
+        Insert a user avatar into the database; this method wraps
+        :meth:`insert`.
+
+        Args:
+            avatar\_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Avatar` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Avatar` object.
+        """
         avatar = Avatar(**avatar_)
         filters = {
             "image_id": avatar.image_id,
@@ -129,19 +243,54 @@ class Database:
         self._insert_log_msg(f"Avatar for user {avatar.user_id}", inserted)
         return avatar
 
-    def insert_board(self, board_: dict, update: bool = False):
+    def insert_board(self, board_: dict, update: bool = False) -> Board:
+        """
+        Insert a board into the database; this method wraps :meth:`insert`.
+
+        Args:
+            board\_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Board` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Board` object.
+        """
         board = Board(**board_)
         inserted, board = self.insert(board, update=update)
         self._insert_log_msg(f"Board {board.name}", inserted)
         return board
 
-    def insert_category(self, category_: dict, update: bool = False):
+    def insert_category(
+        self, category_: dict, update: bool = False
+    ) -> Category:
+        """
+        Insert a category into the database; this method wraps :meth:`insert`.
+
+        Args:
+            category\_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Category` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Category` object.
+        """
         category = Category(**category_)
         inserted, category = self.insert(category, update=update)
         self._insert_log_msg(f"Category {category.name}", inserted)
         return category
 
-    def insert_image(self, image_: dict, update: bool = False):
+    def insert_image(self, image_: dict, update: bool = False) -> Image:
+        """
+        Insert an image into the database; this method wraps :meth:`insert`.
+
+        Args:
+            image\_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Image` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Image` object.
+        """
         image = Image(**image_)
 
         # To determine if the image already exists in the database, search by
@@ -157,7 +306,20 @@ class Database:
         self._insert_log_msg(f"Image {image.url}", inserted)
         return image
 
-    def insert_moderator(self, moderator_: dict, update: bool = False):
+    def insert_moderator(
+        self, moderator_: dict, update: bool = False
+    ) -> Moderator:
+        """
+        Insert a moderator into the database; this method wraps :meth:`insert`.
+
+        Args:
+            moderator\_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Moderator` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Moderator` object.
+        """
         moderator = Moderator(**moderator_)
         filters = {
             "user_id": moderator.user_id,
@@ -172,19 +334,58 @@ class Database:
         )
         return moderator
 
-    def insert_poll(self, poll_: dict, update: bool = False):
+    def insert_poll(self, poll_: dict, update: bool = False) -> Poll:
+        """
+        Insert a poll into the database; this method wraps :meth:`insert`.
+
+        Args:
+            poll\_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`Poll` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Poll` object.
+        """
         poll = Poll(**poll_)
         inserted, poll = self.insert(poll, update=update)
         self._insert_log_msg(f"Poll from thread {poll.id}", inserted)
         return poll
 
-    def insert_poll_option(self, poll_option_: dict, update: bool = False):
+    def insert_poll_option(
+        self, poll_option_: dict, update: bool = False
+    ) -> PollOption:
+        """
+        Insert a poll option into the database; this method wraps
+        :meth:`insert`.
+
+        Args:
+            poll_option\_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`PollOption` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`PollOption` object.
+        """
         poll_option = PollOption(**poll_option_)
         inserted, poll_option = self.insert(poll_option, update=update)
         self._insert_log_msg(f"Poll option {poll_option.id}", inserted)
         return poll_option
 
-    def insert_poll_voter(self, poll_voter_: dict, update: bool = False):
+    def insert_poll_voter(
+        self, poll_voter_: dict, update: bool = False
+    ) -> PollVoter:
+        """
+        Insert a poll voter into the database; this method wraps
+        :meth:`insert`.
+
+        Args:
+            poll_voter\_: A dict containing the keyword args (attributes) needed
+                to instantiate a :class:`PollVoter` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`PollVoter` object.
+        """
         poll_voter = PollVoter(**poll_voter_)
         filters = {
             "poll_id": poll_voter.poll_id,
@@ -200,7 +401,18 @@ class Database:
         )
         return poll_voter
 
-    def insert_post(self, post_: dict, update: bool = False):
+    def insert_post(self, post_: dict, update: bool = False) -> Post:
+        """
+        Insert a post into the database; this method wraps :meth:`insert`.
+
+        Args:
+            post\_: A dict containing the keyword args (attributes) needed to
+                instantiate a :class:`Post` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Post` object.
+        """
         post = Post(**post_)
         inserted, post = self.insert(post, update=update)
         self._insert_log_msg(
@@ -208,35 +420,79 @@ class Database:
             inserted)
         return post
 
-    def insert_shoutbox_post(self, shoutbox_post_: dict, update: bool = False):
+    def insert_shoutbox_post(
+        self, shoutbox_post_: dict, update: bool = False
+    ) -> ShoutboxPost:
+        """
+        Insert a shoutbox post into the database; this method wraps
+        :meth:`insert`.
+
+        Args:
+            shoutbox_post\_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`ShoutboxPost` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`ShoutboxPost` object.
+        """
         shoutbox_post = ShoutboxPost(**shoutbox_post_)
         inserted, shoutbox_post = self.insert(shoutbox_post, update=update)
         self._insert_log_msg(f"Shoutbox post {shoutbox_post.id}", inserted)
         return shoutbox_post
 
-    def insert_thread(self, thread_: dict, update: bool = False):
+    def insert_thread(self, thread_: dict, update: bool = False) -> Thread:
+        """
+        Insert a thread into the database; this method wraps :meth:`insert`.
+
+        Args:
+            thread\_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`Thread` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`Thread` object.
+        """
         thread = Thread(**thread_)
         inserted, thread = self.insert(thread, update=update)
         self._insert_log_msg(f"Thread {thread.title}", inserted)
         return thread
 
-    def insert_user(self, user_: dict, update: bool = False):
+    def insert_user(self, user_: dict, update: bool = False) -> User:
+        """
+        Insert a user into the database; this method wraps :meth:`insert`.
+
+        Args:
+            user\_: A dict containing the keyword args (attributes)
+                needed to instantiate a :class:`User` object.
+            update: See :meth:`insert`.
+
+        Returns:
+            The inserted (or updated) :class:`User` object.
+        """
         user = User(**user_)
         inserted, user = self.insert(user, update=update)
         self._insert_log_msg(f"User {user.name}", inserted)
         return user
 
-    def insert_guest(self, guest_: dict):
+    def insert_guest(self, guest_: dict) -> User:
         """
-        Guest users are a special case of `user`. Guests are users who do not
-        have a user id or a user profile page. They may include deleted users.
-        Since guests may still have posts or threads they've started, they are
+        Guest users are a special case of :class:`User`. Guests are users who
+        do not have a user id or a user profile page, and may include deleted
+        users. Since there may be posts or threads started by guests, they are
         treated as normal users for the purposes of the database, except they
         are assigned a negative integer user id (which does not exist on the
-        actual site). Because a given guest has only a username (not a
-        persistent user id), guests are queried by name. If a guest does not
-        already exist in the database, we use the next smallest negative
-        integer as its user id.
+        actual forum). Because a given guest has only a username and not a
+        user id, guests are queried by name. If a guest does not already exist
+        in the database, the next smallest negative integer is used as their
+        user id.
+
+        Args:
+            guest\_: A dict containing a ``name`` key, corresponding to the
+                guest user's name.
+
+        Returns:
+            The inserted or existing :class:`User` object corresponding to
+            the guest.
         """
         guest = User(**guest_)
 
@@ -264,10 +520,24 @@ class Database:
         self._insert_log_msg(f"Guest {guest.name}", inserted)
         return guest
 
-    def query_users(self, user_id: int = None) -> Union[List[dict], dict]:
+    def query_users(
+        self, user_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        Return a list of all users if no ``user_num`` provided, or a specific
-        user if provided.
+        Return a list of all users, if no ``user_id`` is provided, or a
+        specific user, if it is provided.
+
+        Args:
+            user_id: A user id (optional).
+
+        Returns:
+            A dict corresponding to a user in the database (if ``user_id``
+            was provided), else a list of dicts of all users (if ``user_id``
+            was not provided).
+
+        .. note::
+            The returned :class:`User` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(User)
 
@@ -277,9 +547,24 @@ class Database:
             result = result.all()
         return serialize(result)
 
-    def query_boards(self, board_id: int = None) -> Union[List[dict], dict]:
+    def query_boards(
+        self, board_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        TODO
+        Return a list of all boards if no ``board_id`` is provided or a
+        specific board if it is provided.
+
+        Args:
+            board_id: A board id (optional).
+
+        Returns:
+            A dict corresponding to a board in the database (if ``board_id``
+            was provided), else a list of dicts of all boards (if ``board_id``
+            was not provided).
+
+        .. note::
+            The returned :class:`Board` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(Board)
 
@@ -295,9 +580,24 @@ class Database:
             result = result.all()
         return serialize(result)
 
-    def query_threads(self, thread_id: int = None) -> dict:
+    def query_threads(
+        self, thread_id: Optional[int] = None
+    ) -> Union[List[dict], dict]:
         """
-        TODO
+        Return a list of all threads if no ``thread_id`` is provided or a
+        specific thread if it is provided.
+
+        Args:
+            thread_id: A thread id (optional).
+
+        Returns:
+            A dict corresponding to a thread in the database (if ``thread_id``
+            was provided), else a list of dicts of all threads (if
+            ``thread_id`` was not provided).
+
+        .. note::
+            The returned :class:`Thread` object(s) are serialized to a
+            human-readable JSON format (Python dict) by :func:`serialize`.
         """
         result = self.session.query(Thread)
 

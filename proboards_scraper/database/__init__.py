@@ -1,7 +1,12 @@
-from .database import Database
-from .schema import Base, Board, Category, Moderator, Post, Thread, User
+from .database import Database, serialize
+from .schema import (
+    Avatar, Base, Board, Category, CSS, Image, Moderator, Poll, PollOption,
+    PollVoter, Post, ShoutboxPost, Thread, User
+)
 
 __all__ = [
-    "Database", "Base", "Board", "Category", "Moderator", "Post", "Thread",
-    "User",
+    "Database", "serialize",
+    "Avatar", "Base", "Board", "Category", "CSS", "Image",
+    "Moderator", "Poll", "PollOption", "PollVoter", "Post", "ShoutboxPost",
+    "Thread", "User",
 ]
