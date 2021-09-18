@@ -15,17 +15,14 @@ from typing import Union
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath("../proboards_scraper"))
 
-
 # -- Project information -----------------------------------------------------
-
 project = "ProBoards Forum Scraper"
 copyright = "2021, Najam R. Syed"
 author = "Najam R. Syed"
-version = "1.0"
+version = "1.1"
 
 # The full version, including alpha/beta/rc tags
-release = "1.0"
-
+release = "1.1"
 
 # -- General configuration ---------------------------------------------------
 
@@ -37,7 +34,6 @@ extensions = [
     "sphinx_autodoc_typehints", "sphinx.ext.viewcode",
 ]
 
-# sphinx_autodoc_typehints options
 #autodoc_typehints = "signature"
 typehints_fully_qualified = True
 autodoc_inherit_docstrings = False
@@ -53,13 +49,10 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # Document class __init__ method
 autoclass_content = "both"
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-#html_theme = "alabaster"
 html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -72,6 +65,9 @@ html_static_path = ["_static"]
 #]
 
 def process_type(x: Union[dict, str]):
+    """
+    TODO
+    """
     ret = x
     if isinstance(x, str):
         type_expr = r"(.+?)\[(.+)]$"
@@ -111,6 +107,9 @@ def process_type(x: Union[dict, str]):
 
 
 def proc_docstring(app, what, name, obj, options, lines):
+    """
+    TODO
+    """
     for i, line in enumerate(lines):
         expr = r"(:.+:) (.*)"
         match = re.match(expr, line)
