@@ -32,8 +32,8 @@ Optional arguments
   the site files to a different directory.
 
 * ``-b``/``--board``: If this option is selected without providing a board id,
-  a list of all boards is printed. If a board id is provided, a list of all
-  threads in the given board are printed.
+  a list of all boards is printed. If a board id is provided, information about
+  the given board, including a list of all its threads, is printed.
 
 * ``-u``/``--user``: If this option is selected without providing a user id,
   a list of all users is printed. If a user id is provided, information about
@@ -41,7 +41,8 @@ Optional arguments
 
 * ``-t``/``--thread``: If this option is selected without providing a thread
   id, a list of all threads on the forum is printed. If a thread id is
-  provided, a list of all posts in the given thread is printed.
+  provided, information about the given thread, including a list of all its
+  posts, is printed.
 
 .. note:: One of ``--board``, ``--user``, or ``--thread`` is required.
 
