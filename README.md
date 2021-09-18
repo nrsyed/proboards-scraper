@@ -7,24 +7,23 @@
   - [Scraper command-line tool](#quickstart-pbs)
   - [Database command-line tool](#quickstart-pbd)
 * [Usage](#usage)
+  - [ProBoards Scraper tool](#pbs)
+  - [ProBoards Scraper Database tool](#pbd)
 
 
 # Disclaimer
 
-**It is against
-[ProBoards's Terms of Service](https://www.proboards.com/tos)
+**It is against [ProBoards's Terms of Service](https://www.proboards.com/tos)
 to scrape content from a ProBoards forum. The code in this repository is purely
 for educational purposes, i.e., to demonstrate the use of various libraries and
-techniques, and should NOT be used to scrape any ProBoards forum or website,
-even though ProBoards does not offer the option, paid or otherwise, for forum
-owners and administrators to export their site.**
+techniques, and should NOT be used to scrape any ProBoards forum or website.**
 
-**Neither I (the author) nor this repository have any affiliation or association
+**Neither the author(s) nor this repository have any affiliation or association
 with ProBoards.**
 
 **Per the license included in this repository, this software is provided
 "as is" without warranty of any kind and is not guaranteed to work. Neither
-the author nor the software shall be held liable for any consequences
+the author(s) nor the software shall be held liable for any consequences
 resulting from its use.**
 
 # Overview
@@ -34,7 +33,7 @@ demonstrate the use of various Python modules/packages and various
 web-scraping techniques. It is designed to crawl a forum in a top-down
 manner and store user profiles, categories, boards, threads, polls, posts,
 shoutbox posts, post smileys, user avatars, and the site background/banner
-images in a SQLite database. Scraping is achieved via a
+images primarily in a SQLite database. Scraping is achieved via a
 combination of BeautifulSoup and Selenium, and sqlalchemy is used to
 interface with the SQLite database. Because the majority of this task
 involves HTTP requests and network I/O, the forum is scraped asynchronously
@@ -132,4 +131,58 @@ pbd -d /path/to/database.db -u 23
 ```
 
 # Usage
-&#35; TODO
+
+## pbs
+
+The **P**\ ro\ **B**\ oards **S**\ craper command line tool `pbs` can be
+used to scrape part or all of a ProBoards forum.
+
+```
+usage: pbs [-h] [-u USERNAME] [-p PASSWORD] [-o <path>] [-D] [-U]
+           [-v {0,1,2,3,4,5}] url
+
+positional arguments:
+  url                   URL for either the main page, a board, a thread, or
+                        a user
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o <path>, --output <path>
+                        Path to output directory containing database and
+                        site files (default ./site)
+  -D, --no-delay        Do not rate limit requests
+  -U, --no-users        Do not grab user profiles (only use this option if
+                        a database exists and users have already been added
+                        to it)
+  -v {0,1,2,3,4,5}, --verbosity {0,1,2,3,4,5}
+                        Verbosity level from 0 (silent) to 5 (full debug);
+                        default 2
+
+Login arguments:
+  -u USERNAME, --username USERNAME
+                        Login username
+  -p PASSWORD, --password PASSWORD
+                        Login password
+```
+
+## pbd
+
+The **P**\ ro\ **B**\ oards Scraper **D**\ atabase command line tool `pbd`
+can be used to perform simple queries on the database generated from scraping
+the site via the `pbs` command line tool.
+
+```
+usage: pbd [-h] [-d <path>]
+(--board [board_id] | --user [user_id] | --thread [thread_id])
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d <path>, --database <path>
+                        Path to database file; default ./site/forum.db
+  --board [board_id], -b [board_id]
+                        Board id; if omitted, list all boards
+  --user [user_id], -u [user_id]
+                        User id; if omitted, list all users
+  --thread [thread_id], -t [thread_id]
+                        Thread id; if omitted, list all threads
+```
