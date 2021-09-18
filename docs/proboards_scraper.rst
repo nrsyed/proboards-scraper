@@ -1,8 +1,6 @@
 Python API
 ===========================
 
-TODO: Description here.
-
 Subpackages
 -----------
 

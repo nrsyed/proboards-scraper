@@ -25,7 +25,7 @@ with ProBoards.
 
 Per the license included in the repository, this software is provided
 "as is" without warranty of any kind and is not guaranteed to work. Neither
-the author nor the software shall be held liable for any consequences
+the author(s) nor the software shall be held liable for any consequences
 resulting from its use.
 
 .. _`Proboards Terms of Service`: https://www.proboards.com/tos
