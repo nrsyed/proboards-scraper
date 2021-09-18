@@ -70,3 +70,5 @@ proboards\_scraper.database
    :class-doc-from: class
    :members:
    :show-inheritance:
+
+.. autofunction:: serialize
