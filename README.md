@@ -100,7 +100,7 @@ pbs https://yoursite.proboards.com -o /path/to/directory
 ## Database command-line tool
 
 The package includes a simple command line utility for querying the database
-with `pbd` (**P**ro**B**oards Scraper **D**atabase).
+with `pbd` (**P**ro**B**oards Scraper **D**atabase tool).
 
 ```
 # Print all boards.
@@ -134,7 +134,7 @@ pbd -d /path/to/database.db -u 23
 
 ## pbs
 
-The **P**\ ro\ **B**\ oards **S**\ craper command line tool `pbs` can be
+The **P**ro**B**oards **S**craper command line tool `pbs` can be
 used to scrape part or all of a ProBoards forum.
 
 ```
@@ -167,7 +167,7 @@ Login arguments:
 
 ## pbd
 
-The **P**\ ro\ **B**\ oards Scraper **D**\ atabase command line tool `pbd`
+The **P**ro**B**oards Scraper **D**atabase command line tool `pbd`
 can be used to perform simple queries on the database generated from scraping
 the site via the `pbs` command line tool.
 
