@@ -1,0 +1,606 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>proboards_scraper.database.schema &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli.html">Command Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>proboards_scraper.database.schema</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for proboards_scraper.database.schema</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Boolean</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">UniqueConstraint</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.associationproxy</span> <span class="kn">import</span> <span class="n">association_proxy</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="n">relationship</span>
+
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Avatar"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Avatar">[docs]</a><span class="k">class</span> <span class="nc">Avatar</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table links a user to their avatar.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        image_id (int): Image id of the image that corresponds to this avatar;</span>
+<span class="sd">            see :class:`Image`.</span>
+<span class="sd">        user_id (int): User id of the user to which this avatar belongs;</span>
+<span class="sd">            see :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;avatar&quot;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">(</span><span class="n">UniqueConstraint</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">),)</span>
+
+    <span class="n">image_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;image.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="n">_image</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Image&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Board"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Board">[docs]</a><span class="k">class</span> <span class="nc">Board</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table contains information on boards and their associated metadata.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Board number obtained from the board URL, eg,</span>
+<span class="sd">            ``https://yoursite.proboards.com/board/42/general`` refers to the</span>
+<span class="sd">            &quot;General&quot; board with id 42.</span>
+<span class="sd">        category_id (int): Category id of the category to which this board</span>
+<span class="sd">            belongs; see :class:`Category`.</span>
+<span class="sd">        description (str): Board description.</span>
+<span class="sd">        name (str): Board name. Required.</span>
+<span class="sd">        parent_id (int): Board id of this board&#39;s parent board, if it is a</span>
+<span class="sd">            sub-board.</span>
+<span class="sd">        password_protected (bool): Whether the board is password-protected.</span>
+<span class="sd">        url (str): Board URL.</span>
+
+<span class="sd">        moderators: List of this board&#39;s moderators, if any; see</span>
+<span class="sd">            :class:`Moderator`.</span>
+<span class="sd">        sub_boards: List of this board&#39;s sub-boards, if any.</span>
+<span class="sd">        threads: List of this board&#39;s threads; see :class:`Thread`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;board&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">category_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;category_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;category.id&quot;</span><span class="p">))</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parent_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;parent_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;board.id&quot;</span><span class="p">))</span>
+    <span class="n">password_protected</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;password_protected&quot;</span><span class="p">,</span> <span class="n">Boolean</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+
+    <span class="n">_moderators</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Moderator&quot;</span><span class="p">)</span>
+    <span class="n">moderators</span> <span class="o">=</span> <span class="n">association_proxy</span><span class="p">(</span><span class="s2">&quot;_moderators&quot;</span><span class="p">,</span> <span class="s2">&quot;_users&quot;</span><span class="p">)</span>
+
+    <span class="n">sub_boards</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Board&quot;</span><span class="p">)</span>
+    <span class="n">threads</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Thread&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Category"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Category">[docs]</a><span class="k">class</span> <span class="nc">Category</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table stores information on categories (on the main page) and their</span>
+<span class="sd">    associated metadata.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Category id number obtained from the main page source.</span>
+<span class="sd">        name (str): Category name.</span>
+
+<span class="sd">        boards: List of boards belonging to this category; see :class:`Board`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;category&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">boards</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Board&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CSS"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.CSS">[docs]</a><span class="k">class</span> <span class="nc">CSS</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Table for storing information related to downloaded CSS files. The CSS</span>
+<span class="sd">    files themselves should be stored on disk.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): An arbitrary autoincrementing primary key for each CSS file.</span>
+<span class="sd">        description (str): Description of the file.</span>
+<span class="sd">        filename (str): Filename of the CSS file stored on disk.</span>
+<span class="sd">        md5_hash (str): MD5 hash of the downloaded file.</span>
+<span class="sd">        url (str): Original URL of the CSS file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;css&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">md5_hash</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;md5_hash&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Image"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Image">[docs]</a><span class="k">class</span> <span class="nc">Image</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table stores generic metadata for any image. Image files</span>
+<span class="sd">    themselves should be downloaded and stored somewhere; this table only</span>
+<span class="sd">    records the filename of the downloaded file (which may differ from the</span>
+<span class="sd">    original filename, found in the url). The table may also be used to store</span>
+<span class="sd">    metadata on files that no longer exist, e.g., an avatar hosted on a site</span>
+<span class="sd">    that no longer exists, as a record of the original URL.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): An arbitrary autoincrementing primary key for each image.</span>
+<span class="sd">        description (str): Description of the image. Optional.</span>
+<span class="sd">        filename (str): Filename of the downloaded file on disk.</span>
+<span class="sd">        md5_hash (str): MD5 hash of the downloaded file.</span>
+<span class="sd">        size (int): Size, in bytes, of the downloaded file.</span>
+<span class="sd">        url (str): Original URL of the file.</span>
+
+<span class="sd">    .. seealso::</span>
+<span class="sd">        The :class:`Avatar` table, which links an :class:`Image` to a</span>
+<span class="sd">        :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;image&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">md5_hash</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;md5_hash&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;size&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Moderator"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Moderator">[docs]</a><span class="k">class</span> <span class="nc">Moderator</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table links a user to a board they moderate. A given moderation</span>
+<span class="sd">    relationship (i.e., board + user combination) must be unique.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        board_id (int): Board id of the board the user moderates; see</span>
+<span class="sd">            :class:`Board`.</span>
+<span class="sd">        user_id (int): User id of the moderator; see :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;moderator&quot;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">(</span><span class="n">UniqueConstraint</span><span class="p">(</span><span class="s2">&quot;board_id&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">),)</span>
+
+    <span class="n">board_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;board_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;board.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="n">_users</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;User&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Poll"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Poll">[docs]</a><span class="k">class</span> <span class="nc">Poll</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table stores information on a poll associated with a thread.</span>
+<span class="sd">    Specifically, it links the poll id (which is the same as the thread id)</span>
+<span class="sd">    to the options for the poll and the users who have voted in the poll.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): The thread id to which this poll belongs; see</span>
+<span class="sd">            :class:`Thread`.</span>
+<span class="sd">        name (str): Poll name, i.e., the poll question.</span>
+
+<span class="sd">        options: List of options associated with this poll;</span>
+<span class="sd">            see :class:`PollOption`.</span>
+<span class="sd">        voters: List of users who have voted in this poll; see :class:`PollVoter`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;poll&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;thread.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+
+    <span class="n">options</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;PollOption&quot;</span><span class="p">)</span>
+
+    <span class="n">_voters</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;PollVoter&quot;</span><span class="p">)</span>
+    <span class="n">voters</span> <span class="o">=</span> <span class="n">association_proxy</span><span class="p">(</span><span class="s2">&quot;_voters&quot;</span><span class="p">,</span> <span class="s2">&quot;_user&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PollOption"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.PollOption">[docs]</a><span class="k">class</span> <span class="nc">PollOption</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table stores the number of votes for a poll option. A poll option</span>
+<span class="sd">    must have an associated poll. Note that poll option ids are unique across</span>
+<span class="sd">    the entire site, so we don&#39;t need to create an arbitrary autoincrementing</span>
+<span class="sd">    primary key and can simply use the integer value found on the forum itself.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Poll option (answer) id obtained from scraping the site.</span>
+<span class="sd">        poll_id (int): Poll id (aka, thread id) to which this option belongs;</span>
+<span class="sd">            see :class:`Poll`.</span>
+<span class="sd">        name (str): Option name.</span>
+<span class="sd">        votes (int): Number of votes this option received.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;poll_option&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">poll_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;poll_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;poll.id&quot;</span><span class="p">))</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">votes</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;votes&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PollVoter"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.PollVoter">[docs]</a><span class="k">class</span> <span class="nc">PollVoter</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table links a poll to users who have voted in the poll. Note that we</span>
+<span class="sd">    can only see who has voted on a poll but not which option</span>
+<span class="sd">    (:class:`PollOption`) they voted for. Each row in the table corresponds to</span>
+<span class="sd">    a unique poll/user combination, since a user can vote, at most, only once</span>
+<span class="sd">    in a given poll.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        poll_id (int): Poll id of the poll to which this user/vote belongs;</span>
+<span class="sd">            see :class:`Poll`.</span>
+<span class="sd">        user_id (int): User id of the user/voter; see :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;poll_voter&quot;</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="p">(</span><span class="n">UniqueConstraint</span><span class="p">(</span><span class="s2">&quot;poll_id&quot;</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">),)</span>
+
+    <span class="n">poll_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;poll_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;poll.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="n">_user</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;User&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Post"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Post">[docs]</a><span class="k">class</span> <span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table holds information for each post.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Post id, obtained from the forum. Every post on a forum has</span>
+<span class="sd">            a unique integer id.</span>
+<span class="sd">        date (int): When the post was made (Unix timestamp).</span>
+<span class="sd">        edit_user_id (int): User id of the user who made the last edit, if any;</span>
+<span class="sd">            see :class:`User`. If never edited, this value will be `null`.</span>
+<span class="sd">        last_edited (int): When the post was last edited (Unix timestamp), if</span>
+<span class="sd">            at all. If never edited, this value will be `null`.</span>
+<span class="sd">        message (str): Post content/message, including any raw HTML.</span>
+<span class="sd">        thread_id (int): Thread id of the thread in which the post was made;</span>
+<span class="sd">            see :class:`Thread`.</span>
+<span class="sd">        url (str): Original post URL.</span>
+<span class="sd">        user_id (int): User id of the user who made the post; see :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;post&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">edit_user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;edit_user_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">))</span>
+    <span class="n">last_edited</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;last_edited&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">thread_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;thread_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;thread.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ShoutboxPost"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.ShoutboxPost">[docs]</a><span class="k">class</span> <span class="nc">ShoutboxPost</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table holds information for each shoutbox post.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Autoincrementing primary key.</span>
+<span class="sd">        date (int): When the post was made (Unix timestamp).</span>
+<span class="sd">        message (str): Post content/message, including any HTML.</span>
+<span class="sd">        user_id (int): User id of the user who made the post; see</span>
+<span class="sd">            :class:`User`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;shoutbox_post&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">date</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Thread"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Thread">[docs]</a><span class="k">class</span> <span class="nc">Thread</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table stores information for each thread.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): Thread id, obtained from the thread URL.</span>
+<span class="sd">        announcement (bool): Whether the thread is marked as an announcement.</span>
+<span class="sd">        board_id (int): Board id of the board in which the thread was made;</span>
+<span class="sd">            see :class:`Board`.</span>
+<span class="sd">        locked (bool): Whether the thread is locked.</span>
+<span class="sd">        title (str): Thread title.</span>
+<span class="sd">        url (str): Original URL.</span>
+<span class="sd">        sticky (bool): Whether the thread is stickied.</span>
+<span class="sd">        user_id (int): User id of the user who started the thread; see</span>
+<span class="sd">            :class:`User`.</span>
+<span class="sd">        views (int): Number of thread views.</span>
+
+<span class="sd">        posts: A list of this thread&#39;s posts; see :class:`Post`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;thread&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># TODO: default for locked, sticky, announcement, check bool type</span>
+    <span class="n">announcement</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;announcement&quot;</span><span class="p">,</span> <span class="n">Boolean</span><span class="p">)</span>
+    <span class="n">board_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;board_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;board.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="n">locked</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;locked&quot;</span><span class="p">,</span> <span class="n">Boolean</span><span class="p">)</span>
+    <span class="n">sticky</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;sticky&quot;</span><span class="p">,</span> <span class="n">Boolean</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;user.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="n">views</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;views&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+
+    <span class="n">posts</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Post&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="User"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.User">[docs]</a><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This table holds information on users obtained from their user profile.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        id (int): User number obtained from the user&#39;s profile URL,</span>
+<span class="sd">            eg, ``https://yoursite.proboards.com/user/21`` refers to the user</span>
+<span class="sd">            with user id 21. A negative value indicates a &quot;guest&quot; or deleted</span>
+<span class="sd">            user and does not refer to an actual user id.</span>
+<span class="sd">        age (int): User age. Optional.</span>
+<span class="sd">        birthdate (str): User birthdate string. Optional.</span>
+<span class="sd">        date_registered (int): Unix timestamp.</span>
+<span class="sd">        email (str): User email.</span>
+<span class="sd">        instant_messengers (str): Optional; a string consisting of</span>
+<span class="sd">            semicolon-delimited `messenger_name:screen_name` pairs, eg,</span>
+<span class="sd">            ``&quot;AIM:ssj_goku12;ICQ:12345;YIM:duffman20&quot;``.</span>
+<span class="sd">        gender (str): Optional (&quot;Male&quot;/&quot;Female&quot;/&quot;Other&quot;).</span>
+<span class="sd">        group (str): Group/rank (eg, &quot;Regular Membership&quot;, &quot;Global Moderator&quot;).</span>
+<span class="sd">        last_online (int): Unix timestamp.</span>
+<span class="sd">        latest_status (str): User&#39;s latest status. Optional.</span>
+<span class="sd">        location (str): User location. Optional.</span>
+<span class="sd">        name (str): Display name.</span>
+<span class="sd">        post_count (int): Number of posts (scraped from the user&#39;s profile</span>
+<span class="sd">            page); to get the actual number of posts by the user in the</span>
+<span class="sd">            database, use the :attr:`posts` attribute.</span>
+<span class="sd">        signature (str): User signature. Optional.</span>
+<span class="sd">        url (str): Original user profile page URL.</span>
+<span class="sd">        username (str): Registration name.</span>
+<span class="sd">        website (str): User website. Optional.</span>
+<span class="sd">        website_url (str): User website URL. Optional.</span>
+
+<span class="sd">        avatar: The avatar associated with the user; see :class:`Avatar`.</span>
+<span class="sd">        posts: A list of posts by the user; see :class:`Post`.</span>
+<span class="sd">        threads: A list of threads started by the user; see :class:`Thread`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;user&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="n">age</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">birthdate</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;birthdate&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">date_registered</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;date_registered&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">instant_messengers</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;instant_messengers&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">gender</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;gender&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">last_online</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;last_online&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">latest_status</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;latest_status&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">location</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;location&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">post_count</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;post_count&quot;</span><span class="p">,</span> <span class="n">Integer</span><span class="p">)</span>
+    <span class="n">signature</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;signature&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;username&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">website</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;website&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+    <span class="n">website_url</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="s2">&quot;website_url&quot;</span><span class="p">,</span> <span class="n">String</span><span class="p">)</span>
+
+    <span class="c1"># One-to-one mapping of a user to their avatar, and one-to-many mapping</span>
+    <span class="c1"># of all posts/threads they&#39;ve made or started.</span>
+    <span class="n">posts</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Post&quot;</span><span class="p">,</span> <span class="n">foreign_keys</span><span class="o">=</span><span class="s2">&quot;Post.user_id&quot;</span><span class="p">)</span>
+    <span class="n">threads</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Thread&quot;</span><span class="p">)</span>
+
+    <span class="n">_avatar</span> <span class="o">=</span> <span class="n">relationship</span><span class="p">(</span><span class="s2">&quot;Avatar&quot;</span><span class="p">)</span>
+    <span class="n">avatar</span> <span class="o">=</span> <span class="n">association_proxy</span><span class="p">(</span><span class="s2">&quot;_avatar&quot;</span><span class="p">,</span> <span class="s2">&quot;_image&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

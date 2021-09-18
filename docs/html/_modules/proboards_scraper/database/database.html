@@ -1,0 +1,829 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>proboards_scraper.database.database &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli.html">Command Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>proboards_scraper.database.database</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for proboards_scraper.database.database</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pathlib</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">sqlalchemy</span>
+<span class="kn">import</span> <span class="nn">sqlalchemy.orm</span>
+
+<span class="kn">from</span> <span class="nn">.schema</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Base</span><span class="p">,</span> <span class="n">Avatar</span><span class="p">,</span> <span class="n">Board</span><span class="p">,</span> <span class="n">Category</span><span class="p">,</span> <span class="n">CSS</span><span class="p">,</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Moderator</span><span class="p">,</span> <span class="n">Poll</span><span class="p">,</span> <span class="n">PollOption</span><span class="p">,</span>
+    <span class="n">PollVoter</span><span class="p">,</span> <span class="n">Post</span><span class="p">,</span> <span class="n">ShoutboxPost</span><span class="p">,</span> <span class="n">Thread</span><span class="p">,</span> <span class="n">User</span>
+<span class="p">)</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="serialize"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.serialize">[docs]</a><span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span>
+    <span class="n">obj</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">sqlalchemy</span><span class="o">.</span><span class="n">orm</span><span class="o">.</span><span class="n">DeclarativeMeta</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function that recursively serializes a database table object</span>
+<span class="sd">    (or list of objects) and returns them as Python dictionaries.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        obj: A sqlalchemy Metaclass instance, i.e., one of:</span>
+
+<span class="sd">            * :class:`Avatar`</span>
+<span class="sd">            * :class:`Board`</span>
+<span class="sd">            * :class:`Category`</span>
+<span class="sd">            * :class:`CSS`</span>
+<span class="sd">            * :class:`Image`</span>
+<span class="sd">            * :class:`Moderator`</span>
+<span class="sd">            * :class:`Poll`</span>
+<span class="sd">            * :class:`PollOption`</span>
+<span class="sd">            * :class:`PollVoter`</span>
+<span class="sd">            * :class:`Post`</span>
+<span class="sd">            * :class:`ShoutboxPost`</span>
+<span class="sd">            * :class:`Thread`</span>
+<span class="sd">            * :class:`User`</span>
+
+<span class="sd">    Returns: Serialized version of the object (or list of objects).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">obj</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="n">Board</span><span class="p">,</span> <span class="n">Category</span><span class="p">,</span> <span class="n">Image</span><span class="p">,</span> <span class="n">Poll</span><span class="p">,</span> <span class="n">PollOption</span><span class="p">,</span> <span class="n">PollVoter</span><span class="p">,</span> <span class="n">Post</span><span class="p">,</span> <span class="n">Thread</span><span class="p">,</span>
+            <span class="n">User</span>
+        <span class="p">)</span>
+    <span class="p">):</span>
+        <span class="n">dict_</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
+                <span class="n">dict_</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="c1"># association_proxy._AssociationList and collections.InstrumentedList</span>
+        <span class="c1"># objects are not in Board.__dict__ and must be separately serialized.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Board</span><span class="p">):</span>
+            <span class="n">dict_</span><span class="p">[</span><span class="s2">&quot;moderators&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">moderators</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Poll</span><span class="p">):</span>
+            <span class="n">dict_</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">options</span><span class="p">))</span>
+            <span class="n">dict_</span><span class="p">[</span><span class="s2">&quot;voters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">voters</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Thread</span><span class="p">):</span>
+            <span class="n">dict_</span><span class="p">[</span><span class="s2">&quot;posts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">posts</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">User</span><span class="p">):</span>
+            <span class="n">avatar_</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">avatar</span><span class="p">:</span>
+                <span class="n">avatar</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">avatar</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">avatar_</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="n">avatar</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">avatar</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+                <span class="p">}</span>
+            <span class="n">dict_</span><span class="p">[</span><span class="s2">&quot;avatar&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">avatar_</span>
+
+        <span class="k">return</span> <span class="n">dict_</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">serialize</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<div class="viewcode-block" id="Database"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database">[docs]</a><span class="k">class</span> <span class="nc">Database</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db_path</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This class serves as an interface for the SQLite database, and allows</span>
+<span class="sd">        items to be inserted/updated or queried using a variety of specific</span>
+<span class="sd">        functions that abstract away implementation details of the database</span>
+<span class="sd">        and its schema.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            db_path: Path to SQLite database file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">engine_str</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;sqlite:///</span><span class="si">{</span><span class="n">db_path</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">create_engine</span><span class="p">(</span><span class="n">engine_str</span><span class="p">)</span>
+        <span class="n">Session</span> <span class="o">=</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">orm</span><span class="o">.</span><span class="n">sessionmaker</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">engine</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span>
+
+    <span class="k">def</span> <span class="nf">_insert_log_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item_desc</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">inserted</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        TODO</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            item_desc: Item description.</span>
+<span class="sd">            inserted: Whether the item was updated (2), added (1), or not</span>
+<span class="sd">                added (0) to the database.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">inserted</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">item_desc</span><span class="si">}</span><span class="s2"> already exists in database&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">inserted</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">item_desc</span><span class="si">}</span><span class="s2"> added to database&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">inserted</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">item_desc</span><span class="si">}</span><span class="s2"> database entry was updated&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Database.insert"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert">[docs]</a>    <span class="k">def</span> <span class="nf">insert</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">:</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">orm</span><span class="o">.</span><span class="n">DeclarativeMeta</span><span class="p">,</span>
+        <span class="n">filters</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">sqlalchemy</span><span class="o">.</span><span class="n">orm</span><span class="o">.</span><span class="n">DeclarativeMeta</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Query the database for an object of the given sqlalchemy Metaclass</span>
+<span class="sd">        using the given ``filters`` to determine if it already exists in the</span>
+<span class="sd">        database. If it doesn&#39;t, insert it into the database. Either way,</span>
+<span class="sd">        return a bool indicating whether the object was added, as well as the</span>
+<span class="sd">        resulting object from the query.</span>
+
+<span class="sd">        Although this method can be called directly, it is preferable to call</span>
+<span class="sd">        the corresponding `insert_*` or `query_*` wrapper methods instead,</span>
+<span class="sd">        which simplify the task of querying/inserting into the database.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            obj: A sqlalchemy Metaclass instance corresponding to a</span>
+<span class="sd">                database table class, i.e., an instance of one of:</span>
+
+<span class="sd">                * :class:`Avatar`</span>
+<span class="sd">                * :class:`Board`</span>
+<span class="sd">                * :class:`Category`</span>
+<span class="sd">                * :class:`CSS`</span>
+<span class="sd">                * :class:`Image`</span>
+<span class="sd">                * :class:`Moderator`</span>
+<span class="sd">                * :class:`Poll`</span>
+<span class="sd">                * :class:`PollOption`</span>
+<span class="sd">                * :class:`PollVoter`</span>
+<span class="sd">                * :class:`Post`</span>
+<span class="sd">                * :class:`ShoutboxPost`</span>
+<span class="sd">                * :class:`Thread`</span>
+<span class="sd">                * :class:`User`</span>
+
+<span class="sd">            filters: A dict of key/value pairs on which to filter the query</span>
+<span class="sd">                results. The keys should correspond to the attributes of the</span>
+<span class="sd">                Metaclass, i.e., attributes of the ``obj`` argument class.</span>
+<span class="sd">                See example below. If ``filters`` is ``None``, it defaults to</span>
+<span class="sd">                the ``id`` attribute of ``obj``, i.e., ``obj.id``.</span>
+<span class="sd">            update: Whether to update the database entry if the queried object</span>
+<span class="sd">                already exists.</span>
+
+<span class="sd">        Example:</span>
+<span class="sd">            The following example demonstrates how to insert a new user into</span>
+<span class="sd">            the database. Note that we first create an instance of the user</span>
+<span class="sd">            (which is passed to :meth:`insert`) and filter by the user id</span>
+<span class="sd">            (which is the :class:`User` table primary key). In other words,</span>
+<span class="sd">            this searches the database for an existing user with the given</span>
+<span class="sd">            filter (i.e., the user with id 7) and, if the user doesn&#39;t exist,</span>
+<span class="sd">            inserts it into the database, then returns the inserted object:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                user_data = {</span>
+<span class="sd">                    &quot;id&quot;: 7,</span>
+<span class="sd">                    &quot;date_registered&quot;: 1631019126,</span>
+<span class="sd">                    &quot;email&quot;: &quot;foo@bar.com&quot;,</span>
+<span class="sd">                    &quot;name&quot;: &quot;Snake Plissken&quot;,</span>
+<span class="sd">                    &quot;username&quot;: &quot;snake&quot;,</span>
+<span class="sd">                }</span>
+<span class="sd">                </span>
+<span class="sd">                new_user = User(**user_data)</span>
+<span class="sd">                </span>
+<span class="sd">                db = Database(&quot;forum.db&quot;)</span>
+<span class="sd">                inserted, new_user = db.insert(</span>
+<span class="sd">                    new_user,</span>
+<span class="sd">                    filters={&quot;id&quot;: 7}</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            :data:`(inserted, ret)`</span>
+
+<span class="sd">            * inserted:</span>
+<span class="sd">                An integer code denoting insert status.</span>
+
+<span class="sd">                * 0: The object failed to be inserted or updated.</span>
+<span class="sd">                * 1: ``obj`` was inserted into the database.</span>
+<span class="sd">                * 2: ``obj`` existed in the database and was updated.</span>
+<span class="sd">            * ret:</span>
+<span class="sd">                The inserted object, if the object didn&#39;t previously</span>
+<span class="sd">                exist in the database, or the existing object if it did</span>
+<span class="sd">                already exist. It is effectively an updated version of</span>
+<span class="sd">                ``obj``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">filters</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">obj</span><span class="o">.</span><span class="n">id</span><span class="p">}</span>
+
+        <span class="n">Metaclass</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Metaclass</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="o">**</span><span class="n">filters</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+
+        <span class="n">inserted</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">inserted</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">obj</span>
+        <span class="k">elif</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">update</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">attr</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">attr</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">):</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">inserted</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">inserted</span><span class="p">,</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="Database.insert_avatar"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_avatar">[docs]</a>    <span class="k">def</span> <span class="nf">insert_avatar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">avatar_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Avatar</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a user avatar into the database; this method wraps</span>
+<span class="sd">        :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            avatar\_: A dict containing the keyword args (attributes) needed to</span>
+<span class="sd">                instantiate a :class:`Avatar` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Avatar` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">avatar</span> <span class="o">=</span> <span class="n">Avatar</span><span class="p">(</span><span class="o">**</span><span class="n">avatar_</span><span class="p">)</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;image_id&quot;</span><span class="p">:</span> <span class="n">avatar</span><span class="o">.</span><span class="n">image_id</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">avatar</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">avatar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">avatar</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Avatar for user </span><span class="si">{</span><span class="n">avatar</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">avatar</span></div>
+
+<div class="viewcode-block" id="Database.insert_board"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_board">[docs]</a>    <span class="k">def</span> <span class="nf">insert_board</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">board_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Board</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a board into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            board\_: A dict containing the keyword args (attributes) needed to</span>
+<span class="sd">                instantiate a :class:`Board` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Board` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">board</span> <span class="o">=</span> <span class="n">Board</span><span class="p">(</span><span class="o">**</span><span class="n">board_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">board</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">board</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Board </span><span class="si">{</span><span class="n">board</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">board</span></div>
+
+<div class="viewcode-block" id="Database.insert_category"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_category">[docs]</a>    <span class="k">def</span> <span class="nf">insert_category</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">category_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Category</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a category into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            category\_: A dict containing the keyword args (attributes) needed</span>
+<span class="sd">                to instantiate a :class:`Category` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Category` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="n">Category</span><span class="p">(</span><span class="o">**</span><span class="n">category_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">category</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Category </span><span class="si">{</span><span class="n">category</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">category</span></div>
+
+<div class="viewcode-block" id="Database.insert_image"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_image">[docs]</a>    <span class="k">def</span> <span class="nf">insert_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert an image into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            image\_: A dict containing the keyword args (attributes) needed</span>
+<span class="sd">                to instantiate a :class:`Image` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Image` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">Image</span><span class="p">(</span><span class="o">**</span><span class="n">image_</span><span class="p">)</span>
+
+        <span class="c1"># To determine if the image already exists in the database, search by</span>
+        <span class="c1"># its md5 hash. If the image couldn&#39;t be downloaded (e.g., because its</span>
+        <span class="c1"># URL no longer exists), we will have no md5 hash information and</span>
+        <span class="c1"># should search by its URL instead.</span>
+        <span class="k">if</span> <span class="n">image</span><span class="o">.</span><span class="n">md5_hash</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;md5_hash&quot;</span><span class="p">:</span> <span class="n">image</span><span class="o">.</span><span class="n">md5_hash</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">image</span><span class="o">.</span><span class="n">url</span><span class="p">}</span>
+
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Image </span><span class="si">{</span><span class="n">image</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">image</span></div>
+
+<div class="viewcode-block" id="Database.insert_moderator"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_moderator">[docs]</a>    <span class="k">def</span> <span class="nf">insert_moderator</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">moderator_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Moderator</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a moderator into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            moderator\_: A dict containing the keyword args (attributes) needed</span>
+<span class="sd">                to instantiate a :class:`Moderator` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Moderator` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">moderator</span> <span class="o">=</span> <span class="n">Moderator</span><span class="p">(</span><span class="o">**</span><span class="n">moderator_</span><span class="p">)</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">moderator</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
+            <span class="s2">&quot;board_id&quot;</span><span class="p">:</span> <span class="n">moderator</span><span class="o">.</span><span class="n">board_id</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">moderator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span>
+            <span class="n">moderator</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Moderator (</span><span class="si">{</span><span class="n">moderator</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">, board </span><span class="si">{</span><span class="n">moderator</span><span class="o">.</span><span class="n">board_id</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="n">inserted</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">moderator</span></div>
+
+<div class="viewcode-block" id="Database.insert_poll"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_poll">[docs]</a>    <span class="k">def</span> <span class="nf">insert_poll</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">poll_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Poll</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a poll into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            poll\_: A dict containing the keyword args (attributes) needed</span>
+<span class="sd">                to instantiate a :class:`Poll` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Poll` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">poll</span> <span class="o">=</span> <span class="n">Poll</span><span class="p">(</span><span class="o">**</span><span class="n">poll_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">poll</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">poll</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Poll from thread </span><span class="si">{</span><span class="n">poll</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">poll</span></div>
+
+<div class="viewcode-block" id="Database.insert_poll_option"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_poll_option">[docs]</a>    <span class="k">def</span> <span class="nf">insert_poll_option</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">poll_option_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PollOption</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a poll option into the database; this method wraps</span>
+<span class="sd">        :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            poll_option\_: A dict containing the keyword args (attributes)</span>
+<span class="sd">                needed to instantiate a :class:`PollOption` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`PollOption` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">poll_option</span> <span class="o">=</span> <span class="n">PollOption</span><span class="p">(</span><span class="o">**</span><span class="n">poll_option_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">poll_option</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">poll_option</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Poll option </span><span class="si">{</span><span class="n">poll_option</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">poll_option</span></div>
+
+<div class="viewcode-block" id="Database.insert_poll_voter"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_poll_voter">[docs]</a>    <span class="k">def</span> <span class="nf">insert_poll_voter</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">poll_voter_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PollVoter</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a poll voter into the database; this method wraps</span>
+<span class="sd">        :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            poll_voter\_: A dict containing the keyword args (attributes) needed</span>
+<span class="sd">                to instantiate a :class:`PollVoter` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`PollVoter` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">poll_voter</span> <span class="o">=</span> <span class="n">PollVoter</span><span class="p">(</span><span class="o">**</span><span class="n">poll_voter_</span><span class="p">)</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;poll_id&quot;</span><span class="p">:</span> <span class="n">poll_voter</span><span class="o">.</span><span class="n">poll_id</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">poll_voter</span><span class="o">.</span><span class="n">user_id</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">poll_voter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span>
+            <span class="n">poll_voter</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Poll voter (thread </span><span class="si">{</span><span class="n">poll_voter</span><span class="o">.</span><span class="n">poll_id</span><span class="si">}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;user </span><span class="si">{</span><span class="n">poll_voter</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="n">inserted</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">poll_voter</span></div>
+
+<div class="viewcode-block" id="Database.insert_post"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_post">[docs]</a>    <span class="k">def</span> <span class="nf">insert_post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">post_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Post</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a post into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            post\_: A dict containing the keyword args (attributes) needed to</span>
+<span class="sd">                instantiate a :class:`Post` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Post` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">post</span> <span class="o">=</span> <span class="n">Post</span><span class="p">(</span><span class="o">**</span><span class="n">post_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">post</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">post</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Post </span><span class="si">{</span><span class="n">post</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> (thread </span><span class="si">{</span><span class="n">post</span><span class="o">.</span><span class="n">thread_id</span><span class="si">}</span><span class="s2">, user </span><span class="si">{</span><span class="n">post</span><span class="o">.</span><span class="n">user_id</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">post</span></div>
+
+<div class="viewcode-block" id="Database.insert_shoutbox_post"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_shoutbox_post">[docs]</a>    <span class="k">def</span> <span class="nf">insert_shoutbox_post</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">shoutbox_post_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ShoutboxPost</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a shoutbox post into the database; this method wraps</span>
+<span class="sd">        :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            shoutbox_post\_: A dict containing the keyword args (attributes)</span>
+<span class="sd">                needed to instantiate a :class:`ShoutboxPost` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`ShoutboxPost` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shoutbox_post</span> <span class="o">=</span> <span class="n">ShoutboxPost</span><span class="p">(</span><span class="o">**</span><span class="n">shoutbox_post_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">shoutbox_post</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">shoutbox_post</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shoutbox post </span><span class="si">{</span><span class="n">shoutbox_post</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">shoutbox_post</span></div>
+
+<div class="viewcode-block" id="Database.insert_thread"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_thread">[docs]</a>    <span class="k">def</span> <span class="nf">insert_thread</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">thread_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Thread</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a thread into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            thread\_: A dict containing the keyword args (attributes)</span>
+<span class="sd">                needed to instantiate a :class:`Thread` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`Thread` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="o">**</span><span class="n">thread_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">thread</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">thread</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Thread </span><span class="si">{</span><span class="n">thread</span><span class="o">.</span><span class="n">title</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">thread</span></div>
+
+<div class="viewcode-block" id="Database.insert_user"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_user">[docs]</a>    <span class="k">def</span> <span class="nf">insert_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">update</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">User</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Insert a user into the database; this method wraps :meth:`insert`.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            user\_: A dict containing the keyword args (attributes)</span>
+<span class="sd">                needed to instantiate a :class:`User` object.</span>
+<span class="sd">            update: See :meth:`insert`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted (or updated) :class:`User` object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="o">**</span><span class="n">user_</span><span class="p">)</span>
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;User </span><span class="si">{</span><span class="n">user</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">user</span></div>
+
+<div class="viewcode-block" id="Database.insert_guest"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.insert_guest">[docs]</a>    <span class="k">def</span> <span class="nf">insert_guest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">guest_</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">User</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Guest users are a special case of :class:`User`. Guests are users who</span>
+<span class="sd">        do not have a user id or a user profile page, and may include deleted</span>
+<span class="sd">        users. Since there may be posts or threads started by guests, they are</span>
+<span class="sd">        treated as normal users for the purposes of the database, except they</span>
+<span class="sd">        are assigned a negative integer user id (which does not exist on the</span>
+<span class="sd">        actual forum). Because a given guest has only a username and not a</span>
+<span class="sd">        user id, guests are queried by name. If a guest does not already exist</span>
+<span class="sd">        in the database, the next smallest negative integer is used as their</span>
+<span class="sd">        user id.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            guest\_: A dict containing a ``name`` key, corresponding to the</span>
+<span class="sd">                guest user&#39;s name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The inserted or existing :class:`User` object corresponding to</span>
+<span class="sd">            the guest.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">guest</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="o">**</span><span class="n">guest_</span><span class="p">)</span>
+
+        <span class="c1"># Query the database for all existing guests (negative user id).</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># Of the existing guests, query for the name of the current guest.</span>
+        <span class="n">this_guest</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">guest</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">this_guest</span><span class="p">:</span>
+            <span class="c1"># This guest user already exists in the database.</span>
+            <span class="n">guest</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">this_guest</span><span class="o">.</span><span class="n">id</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Otherwise, this particular guest user does not exist in the</span>
+            <span class="c1"># database. Iterate through all guests and assign a new negative</span>
+            <span class="c1"># user id by decrementing the smallest guest user id already in</span>
+            <span class="c1"># the database.</span>
+            <span class="n">lowest_id</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">existing_guest</span> <span class="ow">in</span> <span class="n">query</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">lowest_id</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">existing_guest</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">lowest_id</span><span class="p">)</span>
+            <span class="n">new_guest_id</span> <span class="o">=</span> <span class="n">lowest_id</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">guest</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">new_guest_id</span>
+
+        <span class="n">inserted</span><span class="p">,</span> <span class="n">guest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">guest</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_log_msg</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Guest </span><span class="si">{</span><span class="n">guest</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">inserted</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">guest</span></div>
+
+<div class="viewcode-block" id="Database.query_users"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.query_users">[docs]</a>    <span class="k">def</span> <span class="nf">query_users</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">user_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all users, if no ``user_id`` is provided, or a</span>
+<span class="sd">        specific user, if it is provided.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            user_id: A user id (optional).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dict corresponding to a user in the database (if ``user_id``</span>
+<span class="sd">            was provided), else a list of dicts of all users (if ``user_id``</span>
+<span class="sd">            was not provided).</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            The returned :class:`User` object(s) are serialized to a</span>
+<span class="sd">            human-readable JSON format (Python dict) by :func:`serialize`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">user_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">serialize</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Database.query_boards"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.query_boards">[docs]</a>    <span class="k">def</span> <span class="nf">query_boards</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">board_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all boards if no ``board_id`` is provided or a</span>
+<span class="sd">        specific board if it is provided.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            board_id: A board id (optional).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dict corresponding to a board in the database (if ``board_id``</span>
+<span class="sd">            was provided), else a list of dicts of all boards (if ``board_id``</span>
+<span class="sd">            was not provided).</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            The returned :class:`Board` object(s) are serialized to a</span>
+<span class="sd">            human-readable JSON format (Python dict) by :func:`serialize`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Board</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">board_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">board_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+            <span class="c1"># AssociationList and InstrumentedList objects are lazily populated</span>
+            <span class="c1"># and not part of Board.__dict__, so we add them manually here</span>
+            <span class="c1"># (but only for querying a single board).</span>
+            <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s2">&quot;moderators&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">moderators</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s2">&quot;sub_boards&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">sub_boards</span><span class="p">)</span>
+            <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s2">&quot;threads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">threads</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">serialize</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Database.query_threads"><a class="viewcode-back" href="../../../proboards_scraper.database.html#proboards_scraper.database.Database.query_threads">[docs]</a>    <span class="k">def</span> <span class="nf">query_threads</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">thread_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span> <span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a list of all threads if no ``thread_id`` is provided or a</span>
+<span class="sd">        specific thread if it is provided.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            thread_id: A thread id (optional).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            A dict corresponding to a thread in the database (if ``thread_id``</span>
+<span class="sd">            was provided), else a list of dicts of all threads (if</span>
+<span class="sd">            ``thread_id`` was not provided).</span>
+
+<span class="sd">        .. note::</span>
+<span class="sd">            The returned :class:`Thread` object(s) are serialized to a</span>
+<span class="sd">            human-readable JSON format (Python dict) by :func:`serialize`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Thread</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">thread_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">thread_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+            <span class="n">thread</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">poll_query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Poll</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">thread_id</span><span class="p">)</span>
+                <span class="n">poll_result</span> <span class="o">=</span> <span class="n">poll_query</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">poll_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">poll</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="n">poll_result</span><span class="p">)</span>
+                    <span class="n">thread</span><span class="p">[</span><span class="s2">&quot;poll&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">poll</span>
+            <span class="k">return</span> <span class="n">thread</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">threads</span> <span class="o">=</span> <span class="n">serialize</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">all</span><span class="p">())</span>
+            <span class="n">threads</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">thread</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">thread</span><span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">thread</span> <span class="ow">in</span> <span class="n">threads</span>
+            <span class="p">]</span>
+            <span class="k">return</span> <span class="n">threads</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

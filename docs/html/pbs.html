@@ -1,0 +1,348 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>pbs &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pbd" href="pbd.html" />
+    <link rel="prev" title="Command Line Interface" href="cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="cli.html">Command Line Interface</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">pbs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#required-arguments">Required arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optional-arguments">Optional arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#scrape-the-entire-forum">Scrape the entire forum</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scrape-all-user-profiles">Scrape all user profiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scrape-a-specific-user-s-profile">Scrape a specific user’s profile</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scrape-a-specific-board">Scrape a specific board</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scrape-a-specific-thread">Scrape a specific thread</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pbd.html">pbd</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="cli.html">Command Line Interface</a> &raquo;</li>
+        
+      <li>pbs</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/pbs.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pbs">
+<h1>pbs<a class="headerlink" href="#pbs" title="Permalink to this headline">¶</a></h1>
+<p>The <strong>P</strong>ro<strong>B</strong>oards <strong>S</strong>craper command line tool <code class="docutils literal notranslate"><span class="pre">pbs</span></code> can be
+used to scrape part or all of a ProBoards forum.</p>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>usage: pbs [-h] [-u USERNAME] [-p PASSWORD] [-o &lt;path&gt;] [-D] [-U]
+           [-v {0,1,2,3,4,5}] url
+
+positional arguments:
+  url                   URL for either the main page, a board, a thread, or
+                        a user
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o &lt;path&gt;, --output &lt;path&gt;
+                        Path to output directory containing database and
+                        site files (default ./site)
+  -D, --no-delay        Do not rate limit requests
+  -U, --no-users        Do not grab user profiles (only use this option if
+                        a database exists and users have already been added
+                        to it)
+  -v {0,1,2,3,4,5}, --verbosity {0,1,2,3,4,5}
+                        Verbosity level from 0 (silent) to 5 (full debug);
+                        default 2
+
+Login arguments:
+  -u USERNAME, --username USERNAME
+                        Login username
+  -p PASSWORD, --password PASSWORD
+                        Login password
+</pre></div>
+</div>
+</div>
+<div class="section" id="required-arguments">
+<h2>Required arguments<a class="headerlink" href="#required-arguments" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">url</span></code>: The URL for the forum homepage, users page, a user profile, a board,
+or a thread to be scraped. See the <code class="docutils literal notranslate"><span class="pre">url</span></code> parameter of
+<a class="reference internal" href="proboards_scraper.html#proboards_scraper.run_scraper" title="proboards_scraper.run_scraper"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.run_scraper()</span></code></a> for more information.</p></li>
+</ul>
+</div>
+<div class="section" id="optional-arguments">
+<h2>Optional arguments<a class="headerlink" href="#optional-arguments" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-u</span></code>/<code class="docutils literal notranslate"><span class="pre">--username</span></code>: Optional login username; must be used with
+<code class="docutils literal notranslate"><span class="pre">--password</span></code>. Login credentials are optional, but password-protected or
+members-only pages cannot be accessed without them.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-p</span></code>/<code class="docutils literal notranslate"><span class="pre">--password</span></code>: See <code class="docutils literal notranslate"><span class="pre">--username</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-o</span></code>/<code class="docutils literal notranslate"><span class="pre">--output</span></code>: Path to the output directory where the database and
+any downloaded files (e.g., images) will be written. The SQLite database
+file will written to <cite>forum.db</cite>, images will be written to a subdirectory
+named <cite>images</cite>, and scraper logging output will be written to a subdirectory
+named <cite>logs</cite>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-D</span></code>/<code class="docutils literal notranslate"><span class="pre">--no-delay</span></code>: This flag disables rate-limiting by the scraper.
+See the <code class="docutils literal notranslate"><span class="pre">request_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">short_delay_time</span></code>, and <code class="docutils literal notranslate"><span class="pre">long_delay_time</span></code>
+attributes of <a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a> for more
+information on rate-limiting values and behavior.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Disabling delays between requests may result in request throttling or being
+blocked by the server.</p>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-U</span></code>/<code class="docutils literal notranslate"><span class="pre">--no-users</span></code>: This flag disables the users page from being scraped
+when the forum homepage URL is given for <code class="docutils literal notranslate"><span class="pre">url</span></code>. This might be desirable if
+a previous attempt to scrape the site was interrupted (after all users from
+the members page have been scraped but before scraping of the rest of the
+site completed) to avoid going through the user profiles again.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-v</span></code>/<code class="docutils literal notranslate"><span class="pre">--verbosity</span></code>: This argument controls the amount of logging output.
+The logging behavior is defined in
+<code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.__main__.configure_logging()</span></code>.</p></li>
+</ul>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="scrape-the-entire-forum">
+<h3>Scrape the entire forum<a class="headerlink" href="#scrape-the-entire-forum" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbs https://yoursite.proboards.com -u user -p pass
+</pre></div>
+</div>
+</div>
+<div class="section" id="scrape-all-user-profiles">
+<h3>Scrape all user profiles<a class="headerlink" href="#scrape-all-user-profiles" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbs https://yoursite.proboards.com/members -u user -p pass
+</pre></div>
+</div>
+</div>
+<div class="section" id="scrape-a-specific-user-s-profile">
+<h3>Scrape a specific user’s profile<a class="headerlink" href="#scrape-a-specific-user-s-profile" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbs https://yoursite.proboards.com/user/4 -u user -p pass
+</pre></div>
+</div>
+</div>
+<div class="section" id="scrape-a-specific-board">
+<h3>Scrape a specific board<a class="headerlink" href="#scrape-a-specific-board" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbs https://yoursite.proboards.com/board/2/boardname -u user -p pass
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This scrapes all threads in the board and recursively scrapes any sub-boards.</p>
+</div>
+</div>
+<div class="section" id="scrape-a-specific-thread">
+<h3>Scrape a specific thread<a class="headerlink" href="#scrape-a-specific-thread" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbs https://yoursite.proboards.com/thread/123/thread-title -u user -p pass
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="pbd.html" class="btn btn-neutral float-right" title="pbd" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="cli.html" class="btn btn-neutral float-left" title="Command Line Interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

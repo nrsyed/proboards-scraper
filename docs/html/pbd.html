@@ -1,0 +1,440 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>pbd &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Python API" href="proboards_scraper.html" />
+    <link rel="prev" title="pbs" href="pbs.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="cli.html">Command Line Interface</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="pbs.html">pbs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">pbd</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optional-arguments">Optional arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#display-a-list-of-all-boards">Display a list of all boards</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#display-information-about-a-specific-board">Display information about a specific board</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#display-a-list-of-all-users">Display a list of all users</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#display-information-about-a-specific-user">Display information about a specific user</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#display-a-list-of-all-threads">Display a list of all threads</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#display-all-posts-in-a-specific-thread">Display all posts in a specific thread</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="cli.html">Command Line Interface</a> &raquo;</li>
+        
+      <li>pbd</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/pbd.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pbd">
+<h1>pbd<a class="headerlink" href="#pbd" title="Permalink to this headline">¶</a></h1>
+<p>The <strong>P</strong>ro<strong>B</strong>oards Scraper <strong>D</strong>atabase command line tool <code class="docutils literal notranslate"><span class="pre">pbd</span></code>
+can be used to perform simple queries on the database generated from scraping
+the site via the <a class="reference internal" href="pbs.html"><span class="doc">pbs</span></a> command line tool.</p>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>usage: pbd [-h] [-d &lt;path&gt;]
+(--board [board_id] | --user [user_id] | --thread [thread_id])
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d &lt;path&gt;, --database &lt;path&gt;
+                        Path to database file; default ./site/forum.db
+  --board [board_id], -b [board_id]
+                        Board id; if omitted, list all boards
+  --user [user_id], -u [user_id]
+                        User id; if omitted, list all users
+  --thread [thread_id], -t [thread_id]
+                        Thread id; if omitted, list all threads
+</pre></div>
+</div>
+</div>
+<div class="section" id="optional-arguments">
+<h2>Optional arguments<a class="headerlink" href="#optional-arguments" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-d</span></code>/<code class="docutils literal notranslate"><span class="pre">--database</span></code>: Path to the SQLite database file (<cite>./site/forum.db</cite>
+by default). See the <code class="docutils literal notranslate"><span class="pre">--output</span></code> option of <a class="reference internal" href="pbs.html"><span class="doc">pbs</span></a> for more on writing
+the site files to a different directory.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-b</span></code>/<code class="docutils literal notranslate"><span class="pre">--board</span></code>: If this option is selected without providing a board id,
+a list of all boards is printed. If a board id is provided, information about
+the given board, including a list of all its threads, is printed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-u</span></code>/<code class="docutils literal notranslate"><span class="pre">--user</span></code>: If this option is selected without providing a user id,
+a list of all users is printed. If a user id is provided, information about
+the given user is printed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-t</span></code>/<code class="docutils literal notranslate"><span class="pre">--thread</span></code>: If this option is selected without providing a thread
+id, a list of all threads on the forum is printed. If a thread id is
+provided, information about the given thread, including a list of all its
+posts, is printed.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>One of <code class="docutils literal notranslate"><span class="pre">--board</span></code>, <code class="docutils literal notranslate"><span class="pre">--user</span></code>, or <code class="docutils literal notranslate"><span class="pre">--thread</span></code> is required.</p>
+</div>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="display-a-list-of-all-boards">
+<h3>Display a list of all boards<a class="headerlink" href="#display-a-list-of-all-boards" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -b
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>1: Media
+2: Announcements
+3: Lounge
+4: Writer&#39;s Room
+</pre></div>
+</div>
+</div>
+<div class="section" id="display-information-about-a-specific-board">
+<h3>Display information about a specific board<a class="headerlink" href="#display-information-about-a-specific-board" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -b 3
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{&#39;category_id&#39;: 1,
+ &#39;description&#39;: &#39;A place to talk about anything&#39;,
+ &#39;id&#39;: 3,
+ &#39;moderators&#39;: [&#39;SnakeShake&#39;, &#39;Tom&#39;],
+ &#39;name&#39;: &#39;Lounge&#39;,
+ &#39;num_threads&#39;: 4,
+ &#39;parent_id&#39;: None,
+ &#39;password_protected&#39;: None,
+ &#39;posts&#39;: 50,
+ &#39;sub_boards&#39;: [1],
+ &#39;threads&#39;: [{&#39;num_posts&#39;: 2, &#39;thread_id&#39;: 1, &#39;title&#39;: &#39;Welcome!&#39;},
+             {&#39;num_posts&#39;: 31, &#39;thread_id&#39;: 5, &#39;title&#39;: &#39;Hobbies&#39;},
+             {&#39;num_posts&#39;: 3, &#39;thread_id&#39;: 6, &#39;title&#39;: &#39;Favorite sports&#39;},
+             {&#39;num_posts&#39;: 4, &#39;thread_id&#39;: 8, &#39;title&#39;: &#39;Podcasts&#39;}],
+ &#39;url&#39;: &#39;https://yoursite.proboards.com/board/3/lounge&#39;}
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Board" title="proboards_scraper.database.Board"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Board</span></code></a></p>
+</div>
+</div>
+<div class="section" id="display-a-list-of-all-users">
+<h3>Display a list of all users<a class="headerlink" href="#display-a-list-of-all-users" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -u
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-2: bob
+-1: guest1
+1: SnakeShake
+2: Tom
+3: patrick_jane
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Guests receive negative user ids in the database. Refer to
+<a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Database.insert_guest" title="proboards_scraper.database.Database.insert_guest"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.database.Database.insert_guest()</span></code></a> for more
+information.</p>
+</div>
+</div>
+<div class="section" id="display-information-about-a-specific-user">
+<h3>Display information about a specific user<a class="headerlink" href="#display-information-about-a-specific-user" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -u 1
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{&#39;age&#39;: 30,
+ &#39;avatar&#39;: {&#39;filename&#39;: &#39;5adac452f7eedc7e1abcec513750a139.jpg&#39;,
+            &#39;url&#39;: &#39;http://img.photobucket.com/albums/v10/snake/vegeta.jpg&#39;},
+ &#39;birthdate&#39;: &#39;January 1, 1991&#39;,
+ &#39;date_registered&#39;: 1090902497000,
+ &#39;email&#39;: &#39;snake@snakemail.com&#39;,
+ &#39;gender&#39;: &#39;Male&#39;,
+ &#39;group&#39;: &#39;Administrator&#39;,
+ &#39;id&#39;: 1,
+ &#39;instant_messengers&#39;: &#39;AIM:snak3_p1i55k3n&#39;,
+ &#39;last_online&#39;: 1625547390000,
+ &#39;latest_status&#39;: &#39;&#39;,
+ &#39;location&#39;: &#39;LA&#39;,
+ &#39;name&#39;: &#39;SnakeShake&#39;,
+ &#39;post_count&#39;: 250,
+ &#39;signature&#39;: None,
+ &#39;url&#39;: &#39;https://yoursite.proboards.com/user/1&#39;,
+ &#39;username&#39;: &#39;snakep123&#39;,
+ &#39;website&#39;: None,
+ &#39;website_url&#39;: None}
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.User" title="proboards_scraper.database.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.User</span></code></a></p>
+</div>
+</div>
+<div class="section" id="display-a-list-of-all-threads">
+<h3>Display a list of all threads<a class="headerlink" href="#display-a-list-of-all-threads" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -t
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[&#39;1: Welcome!&#39;,
+ &#39;2: worst tv show&#39;,
+ &#39;3: ABC game&#39;,
+ &#39;4: Short story practice&#39;,
+ &#39;5: Hobbies&#39;,
+ &#39;6: Favorite sports&#39;,
+ &#39;7: Forum Rules&#39;,
+ &#39;8: Podcasts&#39;]
+</pre></div>
+</div>
+</div>
+<div class="section" id="display-all-posts-in-a-specific-thread">
+<h3>Display all posts in a specific thread<a class="headerlink" href="#display-all-posts-in-a-specific-thread" title="Permalink to this headline">¶</a></h3>
+<p>Sample command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pbd -t 2
+</pre></div>
+</div>
+<p>Sample output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{&#39;announcement&#39;: False,
+ &#39;board_id&#39;: 1,
+ &#39;id&#39;: 2,
+ &#39;locked&#39;: False,
+ &#39;posts&#39;: [{&#39;date&#39;: 1089681705000,
+            &#39;edit_user_id&#39;: None,
+            &#39;id&#39;: 402,
+            &#39;last_edited&#39;: None,
+            &#39;message&#39;: &quot;What&#39;s the worst TV show? IMO it&#39;s the bachelor&quot;,
+            &#39;thread_id&#39;: 2,
+            &#39;url&#39;: &#39;https://yoursite.proboards.com/post/12&#39;,
+            &#39;user_id&#39;: 1},
+           {&#39;date&#39;: 1089697194000,
+            &#39;edit_user_id&#39;: None,
+            &#39;id&#39;: 403,
+            &#39;last_edited&#39;: None,
+            &#39;message&#39;: &#39;No way, I love the bachelor!&#39;,
+            &#39;thread_id&#39;: 2,
+            &#39;url&#39;: &#39;https://yoursite.proboards.com/post/13&#39;,
+            &#39;user_id&#39;: 3},
+ &#39;sticky&#39;: False,
+ &#39;title&#39;: &#39;worst tv show&#39;,
+ &#39;url&#39;: &#39;https://yoursite.proboards.com/thread/2/worst-tv-show&#39;,
+ &#39;user_id&#39;: 1,
+ &#39;views&#39;: 310}
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Thread" title="proboards_scraper.database.Thread"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Thread</span></code></a></p>
+<p><a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Post" title="proboards_scraper.database.Post"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Post</span></code></a></p>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="proboards_scraper.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="pbs.html" class="btn btn-neutral float-left" title="pbs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

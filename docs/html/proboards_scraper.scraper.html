@@ -1,0 +1,423 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>proboards_scraper.scraper &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="proboards_scraper.database" href="proboards_scraper.database.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Interface</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="proboards_scraper.html">Python API</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="proboards_scraper.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="proboards_scraper.database.html">proboards_scraper.database</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">proboards_scraper.scraper</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="proboards_scraper.html#module-proboards_scraper">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="proboards_scraper.html">Python API</a> &raquo;</li>
+        
+      <li>proboards_scraper.scraper</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/proboards_scraper.scraper.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-proboards_scraper.scraper">
+<span id="proboards-scraper-scraper"></span><h1>proboards_scraper.scraper<a class="headerlink" href="#module-proboards_scraper.scraper" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_board">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_board</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_board"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_board" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrape a board, including all sub-boards (recursively) and all threads,
+and add them to the content queue for insertion into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – Board page URL.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_forum">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_forum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_forum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_forum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively scrape the site beginning at the homepage (main forum page),
+including all categories, boards, smileys, and the shoutbox. These items
+are added to the ScraperManager content queue for insertion into the
+database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – Forum homepage URL.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function does NOT scrape user profiles. User profiles must
+be scraped in a separate <code class="docutils literal notranslate"><span class="pre">async</span></code> task via <a class="reference internal" href="#proboards_scraper.scraper.scrape_users" title="proboards_scraper.scraper.scrape_users"><code class="xref py py-func docutils literal notranslate"><span class="pre">scrape_users()</span></code></a>.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_poll">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_poll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thread_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poll_container</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">voters_container</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_poll"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_poll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function for <a class="reference internal" href="#proboards_scraper.scraper.scrape_thread" title="proboards_scraper.scraper.scrape_thread"><code class="xref py py-func docutils literal notranslate"><span class="pre">scrape_thread()</span></code></a> that parses poll HTML and adds
+the poll, poll options, and poll voters and related metadata to the
+ScraperManager content queue for insertion into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>thread_id</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">int</span></code>) – Thread ID of the thread to which this poll belongs. Since
+any given thread can have, at most, one poll, a thread ID can be
+used to uniquely identify a corresponding poll.</p></li>
+<li><p><strong>poll_container</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">bs4.element.Tag</span></code>) – BeautifulSoup HTML container for the poll.</p></li>
+<li><p><strong>voters_container</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">bs4.element.Tag</span></code>) – BeautifulSoup HTML container for poll voters.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_shoutbox">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_shoutbox</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shoutbox_container</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_shoutbox"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_shoutbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrape the shoutbox on the home page and add all shoutbox posts to the
+content queue for insertion into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shoutbox_container</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">bs4.element.Tag</span></code>) – BeautifulSoup HTML corresponding to the shoutbox.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_smileys">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_smileys</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">smiley_menu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_smileys"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_smileys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function for <a class="reference internal" href="#proboards_scraper.scraper.scrape_forum" title="proboards_scraper.scraper.scrape_forum"><code class="xref py py-func docutils literal notranslate"><span class="pre">scrape_forum()</span></code></a> that grabs all smileys available
+in the post editor form, downloading the images and adding them to the
+content queue for insertion into the database. The description for each
+smiley, which is represented as an image in the <cite>Image</cite> table in the
+database, is the word “smiley” followed by the emoticon it represents,
+e.g., <cite>“smiley :)”</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>smiley_menu</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">bs4.element.Tag</span></code>) – BeautifulSoup HTML source corresponding to the smiley
+menu from a post editor form.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_thread">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_thread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_thread"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_thread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrape all pages of a thread, including poll (if any) and all posts,
+and add them to the content queue for insertion into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – Thread URL.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_user">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_user</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_user"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrape a user profile and add the user to the ScraperManager’s user queue
+(from which the user will be inserted into the database), as well as
+download the user’s avatar and insert the image into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – User profile page URL.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.scrape_users">
+<em class="property"><span class="pre">async</span> </em><span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">scrape_users</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">manager</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/scrape.html#scrape_users"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.scrape_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronously iterate over all user profile pages and add them to the
+the ScraperManager user queue for insertion into the database.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – Main members page URL, e.g.,
+<cite>https://yoursite.proboards.com/members</cite>.</p></li>
+<li><p><strong>manager</strong> (<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-data docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a>) – ScraperManager instance.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">None</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="proboards_scraper.scraper.split_url">
+<span class="sig-prename descclassname"><span class="pre">proboards_scraper.scraper.</span></span><span class="sig-name descname"><span class="pre">split_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/proboards_scraper/scraper/utils.html#split_url"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#proboards_scraper.scraper.split_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a forum page URL like, e.g.,
+<cite>https://yoursite.proboards.com/board/3/board-name</cite>, return the base URL
+(<cite>https://yoursite.proboards.com</cite>) and resource path component
+(<cite>board/3/board-name</cite>).</p>
+<p>Site/page URLs take the following forms:</p>
+<ul class="simple">
+<li><p>Homepage: <a class="reference external" href="https://yoursite.proboards.com/">https://yoursite.proboards.com/</a></p></li>
+<li><p>Board: <a class="reference external" href="https://yoursite.proboards.com/board/3/board-name">https://yoursite.proboards.com/board/3/board-name</a></p></li>
+<li><p>Thread: <a class="reference external" href="https://yoursite.proboards.com/thread/123/thread-title">https://yoursite.proboards.com/thread/123/thread-title</a></p></li>
+<li><p>Users: <a class="reference external" href="https://yoursite.proboards.com/members">https://yoursite.proboards.com/members</a></p></li>
+<li><p>User: <a class="reference external" href="https://yoursite.proboards.com/user/10">https://yoursite.proboards.com/user/10</a></p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>url</strong> (<code class="xref py py-data docutils literal notranslate"><span class="pre">str</span></code>) – URL to a forum page.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-data docutils literal notranslate"><span class="pre">Tuple[str,</span> <span class="pre">str]</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p><code class="xref py py-data docutils literal notranslate"><span class="pre">(base_url,</span> <span class="pre">path)</span></code></p>
+<p>The base URL and resource path URL component (or <code class="docutils literal notranslate"><span class="pre">None</span></code> if <code class="docutils literal notranslate"><span class="pre">url</span></code>
+is just the base/homepage URL).</p>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="proboards_scraper.database.html" class="btn btn-neutral float-left" title="proboards_scraper.database" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

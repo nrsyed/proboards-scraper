@@ -1,0 +1,1002 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>proboards_scraper.scraper.scrape &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cli.html">Command Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>proboards_scraper.scraper.scrape</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for proboards_scraper.scraper.scrape</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">bs4</span>
+<span class="kn">import</span> <span class="nn">cssutils</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">int_</span><span class="p">,</span> <span class="n">split_url</span>
+<span class="kn">from</span> <span class="nn">proboards_scraper</span> <span class="kn">import</span> <span class="n">ScraperManager</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="scrape_user"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_user">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_user</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Scrape a user profile and add the user to the ScraperManager&#39;s user queue</span>
+<span class="sd">    (from which the user will be inserted into the database), as well as</span>
+<span class="sd">    download the user&#39;s avatar and insert the image into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: User profile page URL.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get user id from URL, eg, &quot;https://xyz.proboards.com/user/42&quot; has</span>
+    <span class="c1"># user id 42. We can exploit os.path.split() to grab everything right</span>
+    <span class="c1"># of the last backslash.</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">url</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="p">}</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">user_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;show-user&quot;</span><span class="p">})</span>
+
+    <span class="c1"># Get display name and group.</span>
+    <span class="n">name_and_group</span> <span class="o">=</span> <span class="n">user_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+        <span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;name_and_group float-right&quot;</span>
+    <span class="p">)</span>
+    <span class="n">user</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name_and_group</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;big_username&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="c1"># The group name is contained between two &lt;br&gt; tags and is the element&#39;s</span>
+    <span class="c1"># fourth child.</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span><span class="n">child</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">name_and_group</span><span class="o">.</span><span class="n">children</span><span class="p">]</span>
+    <span class="n">user</span><span class="p">[</span><span class="s2">&quot;group&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">children</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="c1"># Get username and last online datetime.</span>
+    <span class="n">controls</span> <span class="o">=</span> <span class="n">user_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;float-right controls&quot;</span><span class="p">)</span>
+    <span class="n">user_datetime</span> <span class="o">=</span> <span class="n">controls</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;float-right clear pad-top&quot;</span><span class="p">)</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span><span class="n">child</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">user_datetime</span><span class="o">.</span><span class="n">children</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">child</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">children</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">NavigableString</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Username:&quot;</span><span class="p">:</span>
+                <span class="n">user</span><span class="p">[</span><span class="s2">&quot;username&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">text</span>
+            <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Last Online:&quot;</span><span class="p">:</span>
+                <span class="c1"># Get Unix timestamp string from &lt;abbr&gt; tag.</span>
+                <span class="n">lastonline_block</span> <span class="o">=</span> <span class="n">children</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">unix_ts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">lastonline_block</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;abbr&quot;</span><span class="p">)[</span><span class="s2">&quot;data-timestamp&quot;</span><span class="p">])</span>
+                <span class="n">user</span><span class="p">[</span><span class="s2">&quot;last_online&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unix_ts</span>
+            <span class="k">elif</span> <span class="n">child</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Member is Online&quot;</span><span class="p">:</span>
+                <span class="c1"># This will be the case for the aiohttp session&#39;s logged-in</span>
+                <span class="c1"># user (and for any other user that happens to be logged in).</span>
+                <span class="c1"># Multiply time.time() value by 1000 for milliseconds.</span>
+                <span class="n">unix_ts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">*</span> <span class="mi">1000</span>
+                <span class="n">user</span><span class="p">[</span><span class="s2">&quot;last_online&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unix_ts</span>
+
+    <span class="c1"># Get rest of user info from the table in the user status form.</span>
+    <span class="n">status_form</span> <span class="o">=</span> <span class="n">user_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+        <span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;pad-all-double ui-helper-clearfix clear&quot;</span>
+    <span class="p">)</span>
+    <span class="n">main_table</span> <span class="o">=</span> <span class="n">status_form</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;center-column&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Extract &quot;content boxes&quot; (&lt;div&gt; elements containing different classes of</span>
+    <span class="c1"># info) from the &quot;main table&quot;.</span>
+    <span class="n">content_boxes</span> <span class="o">=</span> <span class="n">main_table</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;content-box&quot;</span><span class="p">)</span>
+
+    <span class="c1"># The first row (&quot;content box&quot;) of the main table is always present and</span>
+    <span class="c1"># contains another table, where each row contains two columns: the first</span>
+    <span class="c1"># is a heading specifying the type of info (eg, &quot;Email:&quot;), and the second</span>
+    <span class="c1"># contains its value.</span>
+
+    <span class="c1"># NOTE: for the session&#39;s logged-in user, the first row contains a</span>
+    <span class="c1"># &quot;status update&quot; form input, which we identify and delete if necessary.</span>
+    <span class="n">status_input</span> <span class="o">=</span> <span class="n">content_boxes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;status-input&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">status_input</span><span class="p">:</span>
+        <span class="n">content_boxes</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">content_boxes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">):</span>
+        <span class="n">row_data</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">)</span>
+        <span class="n">heading</span> <span class="o">=</span> <span class="n">row_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">row_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Age&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Birthday&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;birthdate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Date Registered&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;date_registered&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;abbr&quot;</span><span class="p">)[</span><span class="s2">&quot;data-timestamp&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Email&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;email&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Gender&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;gender&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Latest Status&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;latest_status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Location&quot;</span><span class="p">:</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;location&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">text</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Posts&quot;</span><span class="p">:</span>
+            <span class="c1"># Remove commas from post count (eg, &quot;1,500&quot; to &quot;1500&quot;).</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;post_count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">int_</span><span class="p">(</span><span class="n">val</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">heading</span> <span class="o">==</span> <span class="s2">&quot;Web Site&quot;</span><span class="p">:</span>
+            <span class="n">website_anchor</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;website_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">website_anchor</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">)</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;website&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">website_anchor</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="c1"># The rest of the relevant content boxes may or not be present.</span>
+    <span class="k">for</span> <span class="n">content_box</span> <span class="ow">in</span> <span class="n">content_boxes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="c1"># We use the first child to determine the content type, ignoring</span>
+        <span class="c1"># any unnecessary newlines.</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">child</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">content_box</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">]</span>
+        <span class="n">first_child</span> <span class="o">=</span> <span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_child</span><span class="p">,</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">NavigableString</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">first_child</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Signature&quot;</span>
+        <span class="p">):</span>
+            <span class="c1"># Grab the entire signature HTML as a string; the signature starts</span>
+            <span class="c1"># after a horizontal line &lt;hr&gt;, ie, the box&#39;s 3rd child and ends</span>
+            <span class="c1"># before the last element</span>
+            <span class="n">signature</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">[</span><span class="mi">2</span><span class="p">:]])</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;signature&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">signature</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">first_child</span><span class="p">,</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">Tag</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="s2">&quot;social&quot;</span> <span class="ow">in</span> <span class="n">first_child</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="ow">and</span> <span class="s2">&quot;messengers&quot;</span> <span class="ow">in</span> <span class="n">first_child</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">):</span>
+            <span class="c1"># Construct the instant messenger string that will be inserted</span>
+            <span class="c1"># into the database. Each messenger label has the form</span>
+            <span class="c1"># &quot;{messenger}:&quot;, eg, &quot;AIM:&quot;, and the next tag (sibling) is the</span>
+            <span class="c1"># messenger screen name. The constructed string is of the form</span>
+            <span class="c1"># &quot;{messenger1}:{screenname1};{messenger2}:{screenname2}:...&quot;</span>
+            <span class="c1"># where each messenger type is delimited by a semicolon, eg:</span>
+            <span class="c1"># &quot;AIM:ssj_goku12;ICQ:12345;YIM:duffman20&quot;</span>
+            <span class="n">messenger_str_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="n">messenger_labels</span> <span class="o">=</span> <span class="n">first_child</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;label&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">messenger_label</span> <span class="ow">in</span> <span class="n">messenger_labels</span><span class="p">:</span>
+                <span class="n">messenger</span> <span class="o">=</span> <span class="n">messenger_label</span><span class="o">.</span><span class="n">text</span>
+                <span class="n">screen_name</span> <span class="o">=</span> <span class="n">messenger_label</span><span class="o">.</span><span class="n">next_sibling</span><span class="o">.</span><span class="n">text</span>
+                <span class="n">messenger_str_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">messenger</span><span class="si">}{</span><span class="n">screen_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">messenger_str</span> <span class="o">=</span> <span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">messenger_str_list</span><span class="p">)</span>
+            <span class="n">user</span><span class="p">[</span><span class="s2">&quot;instant_messengers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">messenger_str</span>
+
+    <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">user_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+
+    <span class="c1"># Get avatar image URL. We wait until after adding the user so to ensure</span>
+    <span class="c1"># that the user is added even if an error is encountered in downloading</span>
+    <span class="c1"># their avatar.</span>
+    <span class="n">avatar_wrapper</span> <span class="o">=</span> <span class="n">user_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;avatar-wrapper&quot;</span><span class="p">)</span>
+    <span class="n">avatar_url</span> <span class="o">=</span> <span class="n">avatar_wrapper</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;img&quot;</span><span class="p">)[</span><span class="s2">&quot;src&quot;</span><span class="p">]</span>
+
+    <span class="n">avatar_ret</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">download_image</span><span class="p">(</span><span class="n">avatar_url</span><span class="p">)</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">avatar_ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+    <span class="n">image</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;avatar&quot;</span>
+
+    <span class="c1"># We need an image id to associate this image with a user as an avatar;</span>
+    <span class="c1"># thus, we must interact with the database directly to retrieve the</span>
+    <span class="c1"># image id (if it already exists in the database) or add then retrieve</span>
+    <span class="c1"># the id of the newly added image (if it doesn&#39;t already exist).</span>
+    <span class="c1"># NOTE: even if the image wasn&#39;t obtained successfully or is invalid, we</span>
+    <span class="c1"># still store an Image in the database that contains the original avatar</span>
+    <span class="c1"># URL (and an Avatar linking that Image to the current user).</span>
+
+    <span class="n">image_id</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">insert_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+    <span class="n">avatar</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;image_id&quot;</span><span class="p">:</span> <span class="n">image_id</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">insert_avatar</span><span class="p">(</span><span class="n">avatar</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Got user profile info for user </span><span class="si">{</span><span class="n">user</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">scrape_user_urls</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Grab all user profile links from the given page source (corresponding to</span>
+<span class="sd">    a page of the members list) and return the user profile links as well as</span>
+<span class="sd">    the link to the next page of users, if any.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        source: Page source for the members page URL, e.g.,</span>
+<span class="sd">            `https://yoursite.proboards.com/members` or</span>
+<span class="sd">            `https://yoursite.proboards.com/members?page=2`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A list of user profile links on the current page and the link to the</span>
+<span class="sd">        next page of user profiles, if any.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO: put this in `scrape_users`.</span>
+    <span class="n">member_hrefs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">next_href</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">members_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container members&quot;</span><span class="p">)</span>
+    <span class="n">members_table_rows</span> <span class="o">=</span> <span class="n">members_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;tbody&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">members_table_rows</span><span class="p">:</span>
+        <span class="c1"># NOTE: the href attribute is relative and must be appended to the</span>
+        <span class="c1"># site&#39;s base URL to construct the full user URL for a user.</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+        <span class="n">member_hrefs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">href</span><span class="p">)</span>
+
+    <span class="c1"># Get the URL for the next page button if it&#39;s enabled.</span>
+    <span class="n">next_</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;li&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="s2">&quot;next&quot;</span><span class="p">})</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">next_</span><span class="o">.</span><span class="n">has_attr</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">):</span>
+        <span class="n">next_href</span> <span class="o">=</span> <span class="n">next_</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">member_hrefs</span><span class="p">,</span> <span class="n">next_href</span>
+
+
+<div class="viewcode-block" id="scrape_users"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_users">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_users</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Asynchronously iterate over all user profile pages and add them to the</span>
+<span class="sd">    the ScraperManager user queue for insertion into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: Main members page URL, e.g.,</span>
+<span class="sd">            `https://yoursite.proboards.com/members`.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting user profile URLs from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">base_url</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">member_hrefs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">_member_hrefs</span><span class="p">,</span> <span class="n">next_href</span> <span class="o">=</span> <span class="n">scrape_user_urls</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">member_hrefs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_member_hrefs</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="n">next_href</span><span class="p">:</span>
+        <span class="n">next_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}{</span><span class="n">next_href</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">next_url</span><span class="p">)</span>
+        <span class="n">_member_hrefs</span><span class="p">,</span> <span class="n">next_href</span> <span class="o">=</span> <span class="n">scrape_user_urls</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="n">member_hrefs</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_member_hrefs</span><span class="p">)</span>
+
+    <span class="n">member_urls</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}{</span><span class="n">member_href</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">member_href</span> <span class="ow">in</span> <span class="n">member_hrefs</span><span class="p">]</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">member_urls</span><span class="p">)</span><span class="si">}</span><span class="s2"> user profile URLs&quot;</span><span class="p">)</span>
+
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
+    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">member_url</span> <span class="ow">in</span> <span class="n">member_urls</span><span class="p">:</span>
+        <span class="n">task</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">scrape_user</span><span class="p">(</span><span class="n">member_url</span><span class="p">,</span> <span class="n">manager</span><span class="p">))</span>
+        <span class="n">tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">tasks</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_poll"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_poll">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_poll</span><span class="p">(</span>
+    <span class="n">thread_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">poll_container</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">Tag</span><span class="p">,</span>
+    <span class="n">voters_container</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">Tag</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function for :func:`scrape_thread` that parses poll HTML and adds</span>
+<span class="sd">    the poll, poll options, and poll voters and related metadata to the</span>
+<span class="sd">    ScraperManager content queue for insertion into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        thread_id: Thread ID of the thread to which this poll belongs. Since</span>
+<span class="sd">            any given thread can have, at most, one poll, a thread ID can be</span>
+<span class="sd">            used to uniquely identify a corresponding poll.</span>
+<span class="sd">        poll_container: BeautifulSoup HTML container for the poll.</span>
+<span class="sd">        voters_container: BeautifulSoup HTML container for poll voters.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">poll_name</span> <span class="o">=</span> <span class="n">poll_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;h3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+    <span class="n">poll</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;poll&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">,</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">poll_name</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span>
+
+    <span class="n">poll_results</span> <span class="o">=</span> <span class="n">poll_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;table&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;results&quot;</span><span class="p">)</span>
+    <span class="n">poll_options</span> <span class="o">=</span> <span class="n">poll_results</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">poll_option_</span> <span class="ow">in</span> <span class="n">poll_options</span><span class="p">:</span>
+        <span class="c1"># Each poll option has a sitewide unique id that can be found in</span>
+        <span class="c1"># the &lt;tr&gt; elements class, e.g., &lt;tr class=&quot;answer-123&quot;&gt;, where</span>
+        <span class="c1"># 123 is the poll option (answer) id.</span>
+        <span class="n">poll_option_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">poll_option_</span><span class="p">[</span><span class="s2">&quot;class&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">poll_option_answer</span> <span class="o">=</span> <span class="n">poll_option_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;answer&quot;</span><span class="p">)</span>
+        <span class="n">poll_option_name</span> <span class="o">=</span> <span class="n">poll_option_answer</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="n">vote_info</span> <span class="o">=</span> <span class="n">poll_option_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;view-votes&quot;</span><span class="p">)</span>
+        <span class="n">votes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">vote_info</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;votes&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="n">poll_option</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;poll_option&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">poll_option_id</span><span class="p">,</span>
+            <span class="s2">&quot;poll_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">poll_option_name</span><span class="p">,</span>
+            <span class="s2">&quot;votes&quot;</span><span class="p">:</span> <span class="n">votes</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">poll_option</span><span class="p">)</span>
+
+    <span class="c1"># Get poll voters.</span>
+    <span class="n">poll_voters</span> <span class="o">=</span> <span class="n">voters_container</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;micro-profile&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">voter</span> <span class="ow">in</span> <span class="n">poll_voters</span><span class="p">:</span>
+        <span class="n">voter_anchor</span> <span class="o">=</span> <span class="n">voter</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">voter_anchor</span><span class="p">[</span><span class="s2">&quot;data-id&quot;</span><span class="p">])</span>
+
+        <span class="n">poll_voter</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;poll_voter&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;poll_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">poll_voter</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_thread"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_thread">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_thread</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Scrape all pages of a thread, including poll (if any) and all posts,</span>
+<span class="sd">    and add them to the content queue for insertion into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: Thread URL.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get thread id from URL.</span>
+    <span class="n">base_url</span><span class="p">,</span> <span class="n">url_path</span> <span class="o">=</span> <span class="n">split_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">thread_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">url_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="c1"># Polls are loaded with the aid of JavaScript; if the thread contains</span>
+    <span class="c1"># a poll, we ust selenium/Chrome to get the source. However, the source</span>
+    <span class="c1"># obtained through selenium is different from the source obtained without</span>
+    <span class="c1"># it, so we must also obtain the source via aiohttp as usual to ensure</span>
+    <span class="c1"># that the rest of the elements can be scraped (e.g., the next page button</span>
+    <span class="c1"># has a different class when JS is enabled).</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+    <span class="c1"># All thread metadata is contained in a particular &lt;script&gt; element in a</span>
+    <span class="c1"># somewhat convoluted manner. The method for extracting it is equally</span>
+    <span class="c1"># convoluted but implemented below with as much clarity as possible.</span>
+    <span class="n">metadata_script</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">metadata_expr</span> <span class="o">=</span> <span class="s1">&#39;&quot;thread&quot;:({.*?})&#39;</span>
+    <span class="n">script_tags</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;script&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">script_tag</span> <span class="ow">in</span> <span class="n">script_tags</span><span class="p">:</span>
+        <span class="n">script</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">script_tag</span><span class="o">.</span><span class="n">string</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">script</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;proboards.data(&quot;</span><span class="p">):</span>
+            <span class="n">metadata_script</span> <span class="o">=</span> <span class="n">script</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Failed to find thread metadata script tag for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Use the ``json`` module to get the metadata as a Python dict.</span>
+    <span class="n">metadata_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">metadata_expr</span><span class="p">,</span> <span class="n">metadata_script</span><span class="p">)</span>
+    <span class="n">metadata_str</span> <span class="o">=</span> <span class="n">metadata_match</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">metadata_str</span><span class="p">)</span>
+
+    <span class="n">announcement</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;is_announcement&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">board_id</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;board_id&quot;</span><span class="p">]</span>
+    <span class="n">locked</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;is_locked&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">poll</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;is_poll&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">sticky</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;is_sticky&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;created_by&quot;</span><span class="p">]</span>
+    <span class="n">views</span> <span class="o">=</span> <span class="n">int_</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;views&quot;</span><span class="p">])</span>
+
+    <span class="c1"># If the create user id is 0, it means the user who created the thread</span>
+    <span class="c1"># is a guest. In this case, we jump ahead to the first post to grab the</span>
+    <span class="c1"># guest user name and get a database user id for the guest.</span>
+    <span class="k">if</span> <span class="n">user_id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">first_post</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;tr.post.first&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">guest_user_name</span> <span class="o">=</span> <span class="n">first_post</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;user-guest&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">insert_guest</span><span class="p">(</span><span class="n">guest_user_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">poll</span><span class="p">:</span>
+        <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># Click the &quot;View Voters&quot; button, which causes a modal to load.</span>
+        <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_link_text</span><span class="p">(</span><span class="s2">&quot;View Voters&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">selenium_source</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">page_source</span>
+        <span class="n">selenium_source</span> <span class="o">=</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">selenium_source</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+        <span class="n">selenium_post_container</span> <span class="o">=</span> <span class="n">selenium_source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+            <span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container posts&quot;</span>
+        <span class="p">)</span>
+        <span class="n">poll_container</span> <span class="o">=</span> <span class="n">selenium_post_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;poll&quot;</span><span class="p">)</span>
+        <span class="n">voters_container</span> <span class="o">=</span> <span class="n">selenium_source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;poll-voters&quot;</span><span class="p">})</span>
+        <span class="k">await</span> <span class="n">scrape_poll</span><span class="p">(</span><span class="n">thread_id</span><span class="p">,</span> <span class="n">poll_container</span><span class="p">,</span> <span class="n">voters_container</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span>
+
+    <span class="n">post_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container posts&quot;</span><span class="p">)</span>
+    <span class="n">title_bar</span> <span class="o">=</span> <span class="n">post_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;title-bar&quot;</span><span class="p">)</span>
+    <span class="n">thread_title</span> <span class="o">=</span> <span class="n">title_bar</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;h1&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="n">thread</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;thread&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;announcement&quot;</span><span class="p">:</span> <span class="n">announcement</span><span class="p">,</span>
+        <span class="s2">&quot;board_id&quot;</span><span class="p">:</span> <span class="n">board_id</span><span class="p">,</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">,</span>
+        <span class="s2">&quot;locked&quot;</span><span class="p">:</span> <span class="n">locked</span><span class="p">,</span>
+        <span class="s2">&quot;sticky&quot;</span><span class="p">:</span> <span class="n">sticky</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">thread_title</span><span class="p">,</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+        <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+        <span class="s2">&quot;views&quot;</span><span class="p">:</span> <span class="n">views</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">thread</span><span class="p">)</span>
+
+    <span class="n">pages_remaining</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">while</span> <span class="n">pages_remaining</span><span class="p">:</span>
+        <span class="n">posts</span> <span class="o">=</span> <span class="n">post_container</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;post&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">post_</span> <span class="ow">in</span> <span class="n">posts</span><span class="p">:</span>
+            <span class="c1"># Each post &lt;tr&gt; tag has an id attribute of the form</span>
+            <span class="c1"># &lt;tr id=&quot;post-1234&quot;&gt;, where 1234 is the post id.</span>
+            <span class="n">post_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">post_</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="c1"># &quot;left panel&quot; contains info about the user who made the post.</span>
+            <span class="n">left_panel</span> <span class="o">=</span> <span class="n">post_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;left-panel&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">guest_</span> <span class="o">:=</span> <span class="n">left_panel</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;user-guest&quot;</span><span class="p">):</span>
+                <span class="n">guest_user_name</span> <span class="o">=</span> <span class="n">guest_</span><span class="o">.</span><span class="n">text</span>
+                <span class="n">guest_id</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">insert_guest</span><span class="p">(</span><span class="n">guest_user_name</span><span class="p">)</span>
+                <span class="n">user_id</span> <span class="o">=</span> <span class="n">guest_id</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># &lt;a&gt; tag href attribute is of the form &quot;/user/5&quot;.</span>
+                <span class="n">user_link</span> <span class="o">=</span> <span class="n">left_panel</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;user-link&quot;</span><span class="p">)</span>
+                <span class="n">user_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">user_link</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">post_content</span> <span class="o">=</span> <span class="n">post_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;content&quot;</span><span class="p">)</span>
+            <span class="n">post_info</span> <span class="o">=</span> <span class="n">post_content</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">)</span>
+
+            <span class="n">date_abbr</span> <span class="o">=</span> <span class="n">post_info</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;abbr&quot;</span><span class="p">)</span>
+            <span class="n">date</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">date_abbr</span><span class="p">[</span><span class="s2">&quot;data-timestamp&quot;</span><span class="p">])</span>
+
+            <span class="n">article</span> <span class="o">=</span> <span class="n">post_content</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;article&quot;</span><span class="p">)</span>
+            <span class="n">message_</span> <span class="o">=</span> <span class="n">article</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;message&quot;</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">child</span><span class="p">)</span> <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">message_</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+
+            <span class="n">last_edited</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">edit_user_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="n">edited_by</span> <span class="o">=</span> <span class="n">post_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;edited_by&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">edited_by</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">last_edited</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">edited_by</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;abbr&quot;</span><span class="p">)[</span><span class="s2">&quot;data-timestamp&quot;</span><span class="p">])</span>
+                <span class="n">edit_user_anchor</span> <span class="o">=</span> <span class="n">edited_by</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">edit_user_anchor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># This represents the case where a guest user has edited</span>
+                    <span class="c1"># their own post.</span>
+                    <span class="n">edit_guest</span> <span class="o">=</span> <span class="n">edited_by</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;user-guest&quot;</span><span class="p">)</span>
+                    <span class="n">guest_user_name</span> <span class="o">=</span> <span class="n">edit_guest</span><span class="o">.</span><span class="n">text</span>
+                    <span class="n">edit_user_id</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">insert_guest</span><span class="p">(</span><span class="n">guest_user_name</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">edit_user_href</span> <span class="o">=</span> <span class="n">edited_by</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+                    <span class="n">edit_user_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">edit_user_href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">post</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;post&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">post_id</span><span class="p">,</span>
+                <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">date</span><span class="p">,</span>
+                <span class="s2">&quot;edit_user_id&quot;</span><span class="p">:</span> <span class="n">edit_user_id</span><span class="p">,</span>
+                <span class="s2">&quot;last_edited&quot;</span><span class="p">:</span> <span class="n">last_edited</span><span class="p">,</span>
+                <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">message</span><span class="p">,</span>
+                <span class="s2">&quot;thread_id&quot;</span><span class="p">:</span> <span class="n">thread_id</span><span class="p">,</span>
+                <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">/post/</span><span class="si">{</span><span class="n">post_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+
+        <span class="c1"># Continue to next page, if any.</span>
+        <span class="n">control_bar</span> <span class="o">=</span> <span class="n">post_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;control-bar&quot;</span><span class="p">)</span>
+        <span class="n">next_btn</span> <span class="o">=</span> <span class="n">control_bar</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;li&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;next&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;state-disabled&quot;</span> <span class="ow">in</span> <span class="n">next_btn</span><span class="p">[</span><span class="s2">&quot;class&quot;</span><span class="p">]:</span>
+            <span class="n">pages_remaining</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">next_href</span> <span class="o">=</span> <span class="n">next_btn</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+            <span class="n">next_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}{</span><span class="n">next_href</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">next_url</span><span class="p">)</span>
+            <span class="n">post_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container posts&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_board"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_board">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_board</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Scrape a board, including all sub-boards (recursively) and all threads,</span>
+<span class="sd">    and add them to the content queue for insertion into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: Board page URL.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Board URLs take the form:</span>
+    <span class="c1"># https://yoursite.proboards.com/board/{id}/{name}</span>
+    <span class="n">base_url</span><span class="p">,</span> <span class="n">url_path</span> <span class="o">=</span> <span class="n">split_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">board_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">url_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+    <span class="c1"># Get board name and description from Information/Statistics container.</span>
+    <span class="n">stats_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container stats&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Get category id and parent board id (if any, i.e., if this is a</span>
+    <span class="c1"># sub-board) from the navigation tree at the top of the page.</span>
+    <span class="c1"># The first nav-tree item contains no useful information. The second</span>
+    <span class="c1"># contains a link to the category. The last corresponds to the current</span>
+    <span class="c1"># board. If there are more than three items, the second-to-last contains</span>
+    <span class="c1"># the parent board.</span>
+    <span class="n">nav_tree</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;ul&quot;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;nav-tree&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;li&quot;</span><span class="p">)</span>
+
+    <span class="c1"># The category &lt;li&gt; tag contains an anchor tag with a href as follows:</span>
+    <span class="c1"># &lt;a href=&quot;/#category-4&quot;&gt;</span>
+    <span class="c1"># where, in this example, the category id is 4.</span>
+    <span class="n">category_li</span> <span class="o">=</span> <span class="n">nav_tree</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">category_href</span> <span class="o">=</span> <span class="n">category_li</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+    <span class="n">category_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">category_href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># The parent board &lt;li&gt; tag (if any) contains an anchor tag with a href as</span>
+    <span class="c1"># follows: &lt;a href=&quot;/board/12/board-name&quot;&gt;</span>
+    <span class="c1"># where, in this example, the parent board id is 12.</span>
+    <span class="n">parent_id</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nav_tree</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">parent_board_li</span> <span class="o">=</span> <span class="n">nav_tree</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">parent_board_href</span> <span class="o">=</span> <span class="n">parent_board_li</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+        <span class="n">parent_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parent_board_href</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;moderators-link&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">find_element_by_id</span><span class="p">(</span><span class="s2">&quot;moderators-link&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">selenium_source</span> <span class="o">=</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">(</span>
+            <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">page_source</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">micro_profiles</span> <span class="o">=</span> <span class="n">selenium_source</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;micro-profile&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">micro_profile</span> <span class="ow">in</span> <span class="n">micro_profiles</span><span class="p">:</span>
+            <span class="n">user_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">micro_profile</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;data-id&quot;</span><span class="p">])</span>
+
+            <span class="n">moderator</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;moderator&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+                <span class="s2">&quot;board_id&quot;</span><span class="p">:</span> <span class="n">board_id</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">moderator</span><span class="p">)</span>
+
+    <span class="n">description</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">password_protected</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="p">(</span><span class="ow">not</span> <span class="n">stats_container</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="p">(</span><span class="s2">&quot;This board is password protected&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+    <span class="p">):</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container&quot;</span><span class="p">)</span>
+        <span class="n">title_heading</span> <span class="o">=</span> <span class="n">container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;title-bar&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;h2&quot;</span><span class="p">)</span>
+        <span class="n">board_name</span> <span class="o">=</span> <span class="n">title_heading</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">password_protected</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">board_name</span> <span class="o">=</span> <span class="n">stats_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;board-name&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="n">stats_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+            <span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;board-description&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">text</span>
+
+    <span class="n">board</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;board&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;category_id&quot;</span><span class="p">:</span> <span class="n">category_id</span><span class="p">,</span>
+        <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">board_id</span><span class="p">,</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">board_name</span><span class="p">,</span>
+        <span class="s2">&quot;parent_id&quot;</span><span class="p">:</span> <span class="n">parent_id</span><span class="p">,</span>
+        <span class="s2">&quot;password_protected&quot;</span><span class="p">:</span> <span class="n">password_protected</span><span class="p">,</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">board</span><span class="p">)</span>
+
+    <span class="c1"># Add any sub-boards to the queue.</span>
+    <span class="n">subboard_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container boards&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">subboard_container</span><span class="p">:</span>
+        <span class="n">subboards</span> <span class="o">=</span> <span class="n">subboard_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;tbody&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">subboard</span> <span class="ow">in</span> <span class="n">subboards</span><span class="p">:</span>
+            <span class="n">clickable</span> <span class="o">=</span> <span class="n">subboard</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;main clickable&quot;</span><span class="p">)</span>
+            <span class="n">link</span> <span class="o">=</span> <span class="n">clickable</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;link&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+            <span class="n">href</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+            <span class="n">subboard_url</span> <span class="o">=</span> <span class="n">base_url</span> <span class="o">+</span> <span class="n">href</span>
+
+            <span class="k">await</span> <span class="n">scrape_board</span><span class="p">(</span><span class="n">subboard_url</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span>
+
+    <span class="c1"># Iterate over all board pages and add threads on each page to queue.</span>
+    <span class="n">thread_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container threads&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">thread_container</span><span class="p">:</span>
+        <span class="n">pages_remaining</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">pages_remaining</span><span class="p">:</span>
+            <span class="n">thread_tbody</span> <span class="o">=</span> <span class="n">thread_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;tbody&quot;</span><span class="p">)</span>
+            <span class="n">threads</span> <span class="o">=</span> <span class="n">thread_tbody</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;tr&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;thread&quot;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">thread_</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+                <span class="n">clickable</span> <span class="o">=</span> <span class="n">thread_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;main clickable&quot;</span><span class="p">)</span>
+                <span class="n">anchor</span> <span class="o">=</span> <span class="n">clickable</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;link target&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+                <span class="n">thread_href</span> <span class="o">=</span> <span class="n">anchor</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+                <span class="n">thread_url</span> <span class="o">=</span> <span class="n">base_url</span> <span class="o">+</span> <span class="n">thread_href</span>
+
+                <span class="k">await</span> <span class="n">scrape_thread</span><span class="p">(</span><span class="n">thread_url</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span>
+
+            <span class="c1"># control-bar contains pagination/navigation buttons.</span>
+            <span class="n">control_bar</span> <span class="o">=</span> <span class="n">thread_container</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;ul&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;ui-pagination&quot;</span><span class="p">)</span>
+            <span class="n">next_btn</span> <span class="o">=</span> <span class="n">control_bar</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;li&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;next&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;state-disabled&quot;</span> <span class="ow">in</span> <span class="n">next_btn</span><span class="p">[</span><span class="s2">&quot;class&quot;</span><span class="p">]:</span>
+                <span class="n">pages_remaining</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">next_page_href</span> <span class="o">=</span> <span class="n">next_btn</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+                <span class="n">next_page_url</span> <span class="o">=</span> <span class="n">base_url</span> <span class="o">+</span> <span class="n">next_page_href</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting source for </span><span class="si">{</span><span class="n">next_page_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">source</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">next_page_url</span><span class="p">)</span>
+                <span class="n">thread_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+                    <span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container threads&quot;</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_shoutbox"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_shoutbox">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_shoutbox</span><span class="p">(</span>
+    <span class="n">shoutbox_container</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">Tag</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Scrape the shoutbox on the home page and add all shoutbox posts to the</span>
+<span class="sd">    content queue for insertion into the database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        shoutbox_container: BeautifulSoup HTML corresponding to the shoutbox.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shoutbox_posts</span> <span class="o">=</span> <span class="n">shoutbox_container</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;shoutbox-post&quot;</span><span class="p">)</span>
+
+    <span class="n">post_id_expr</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;shoutbox-post-(\d+)&quot;</span>
+
+    <span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="n">shoutbox_posts</span><span class="p">:</span>
+        <span class="n">post_id</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">class_</span> <span class="ow">in</span> <span class="n">post</span><span class="p">[</span><span class="s2">&quot;class&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">match</span> <span class="o">:=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">post_id_expr</span><span class="p">,</span> <span class="n">class_</span><span class="p">):</span>
+                <span class="n">post_id</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">post</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;abbr&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)[</span><span class="s2">&quot;data-timestamp&quot;</span><span class="p">])</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">post</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;message&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span>
+        <span class="n">user_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">post</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;user-link&quot;</span><span class="p">)[</span><span class="s2">&quot;data-id&quot;</span><span class="p">])</span>
+
+        <span class="n">shoutbox_post</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;shoutbox_post&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">post_id</span><span class="p">,</span>
+            <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">timestamp</span><span class="p">,</span>
+            <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">message</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">shoutbox_post</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_smileys"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_smileys">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_smileys</span><span class="p">(</span>
+    <span class="n">smiley_menu</span><span class="p">:</span> <span class="n">bs4</span><span class="o">.</span><span class="n">element</span><span class="o">.</span><span class="n">Tag</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function for :func:`scrape_forum` that grabs all smileys available</span>
+<span class="sd">    in the post editor form, downloading the images and adding them to the</span>
+<span class="sd">    content queue for insertion into the database. The description for each</span>
+<span class="sd">    smiley, which is represented as an image in the `Image` table in the</span>
+<span class="sd">    database, is the word &quot;smiley&quot; followed by the emoticon it represents,</span>
+<span class="sd">    e.g., `&quot;smiley :)&quot;`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        smiley_menu: BeautifulSoup HTML source corresponding to the smiley</span>
+<span class="sd">            menu from a post editor form.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">smiley</span> <span class="ow">in</span> <span class="n">smiley_menu</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;li&quot;</span><span class="p">):</span>
+        <span class="n">img_tag</span> <span class="o">=</span> <span class="n">smiley</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;img&quot;</span><span class="p">)</span>
+        <span class="n">emoticon</span> <span class="o">=</span> <span class="n">img_tag</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span>
+        <span class="n">img_url</span> <span class="o">=</span> <span class="n">img_tag</span><span class="p">[</span><span class="s2">&quot;src&quot;</span><span class="p">]</span>
+
+        <span class="n">smiley_ret</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">download_image</span><span class="p">(</span><span class="n">img_url</span><span class="p">)</span>
+
+        <span class="n">image</span> <span class="o">=</span> <span class="n">smiley_ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+        <span class="n">image</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;image&quot;</span>
+        <span class="n">image</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;smiley </span><span class="si">{</span><span class="n">emoticon</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">image</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="scrape_forum"><a class="viewcode-back" href="../../../proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_forum">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">scrape_forum</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">manager</span><span class="p">:</span> <span class="n">ScraperManager</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Recursively scrape the site beginning at the homepage (main forum page),</span>
+<span class="sd">    including all categories, boards, smileys, and the shoutbox. These items</span>
+<span class="sd">    are added to the ScraperManager content queue for insertion into the</span>
+<span class="sd">    database.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: Forum homepage URL.</span>
+<span class="sd">        manager: ScraperManager instance.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        This function does NOT scrape user profiles. User profiles must</span>
+<span class="sd">        be scraped in a separate ``async`` task via :func:`scrape_users`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Use selenium to get the page source because it will load the smileys</span>
+    <span class="c1"># in the shoutbox post area.</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">manager</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">page_source</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Grab favicon.</span>
+    <span class="n">favicon_url</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;link&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;rel&quot;</span><span class="p">:</span> <span class="s2">&quot;icon&quot;</span><span class="p">})[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+    <span class="n">favicon_ret</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">download_image</span><span class="p">(</span><span class="n">favicon_url</span><span class="p">)</span>
+    <span class="n">favicon_image</span> <span class="o">=</span> <span class="n">favicon_ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+    <span class="n">favicon_image</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;favicon&quot;</span>
+    <span class="n">favicon_image</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;image&quot;</span>
+    <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">favicon_image</span><span class="p">)</span>
+
+    <span class="c1"># Grab site background and banner from CSS (TODO: add CSS to database?)</span>
+    <span class="n">bg_image_expr</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;url\((.+)\)&quot;</span>
+    <span class="n">stylesheets</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;link&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;rel&quot;</span><span class="p">:</span> <span class="s2">&quot;stylesheet&quot;</span><span class="p">})</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">stylesheet</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">stylesheets</span><span class="p">):</span>
+        <span class="n">css_href</span> <span class="o">=</span> <span class="n">stylesheet</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+        <span class="n">css_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https:</span><span class="si">{</span><span class="n">css_href</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">css</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_source</span><span class="p">(</span><span class="n">css_url</span><span class="p">)</span>
+
+        <span class="n">sheet</span> <span class="o">=</span> <span class="n">cssutils</span><span class="o">.</span><span class="n">parseString</span><span class="p">(</span><span class="n">css</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">sheet</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">rule</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">rule</span><span class="o">.</span><span class="n">STYLE_RULE</span>
+                <span class="ow">and</span> <span class="s2">&quot;background-image&quot;</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">style</span>
+                <span class="ow">and</span> <span class="n">rule</span><span class="o">.</span><span class="n">selectorText</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">,</span> <span class="s2">&quot;#banner&quot;</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="c1"># Background image CSS styles have the form</span>
+                <span class="c1"># &#39;url(http://domain.com/path/to/img.jpg)&#39;.</span>
+                <span class="n">bg_image_style</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;background-image&quot;</span><span class="p">]</span>
+                <span class="n">bg_image_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">bg_image_expr</span><span class="p">,</span> <span class="n">bg_image_style</span><span class="p">)</span>
+                <span class="n">bg_image_url</span> <span class="o">=</span> <span class="n">bg_image_match</span><span class="o">.</span><span class="n">groups</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">bg_image_ret</span> <span class="o">=</span> <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">download_image</span><span class="p">(</span><span class="n">bg_image_url</span><span class="p">)</span>
+                <span class="n">bg_image</span> <span class="o">=</span> <span class="n">bg_image_ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+                <span class="n">bg_image</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;image&quot;</span>
+
+                <span class="k">if</span> <span class="n">rule</span><span class="o">.</span><span class="n">selectorText</span> <span class="o">==</span> <span class="s2">&quot;body&quot;</span><span class="p">:</span>
+                    <span class="n">bg_image</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;background&quot;</span>
+                <span class="k">elif</span> <span class="n">rule</span><span class="o">.</span><span class="n">selectorText</span> <span class="o">==</span> <span class="s2">&quot;#banner&quot;</span><span class="p">:</span>
+                    <span class="n">bg_image</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;banner&quot;</span>
+
+                <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">bg_image</span><span class="p">)</span>
+
+    <span class="n">smiley_menu</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;ul&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;smiley-menu&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">scrape_smileys</span><span class="p">(</span><span class="n">smiley_menu</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span>
+
+    <span class="n">shoutbox_container</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;shoutbox_container&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">scrape_shoutbox</span><span class="p">(</span><span class="n">shoutbox_container</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span>
+
+    <span class="n">categories</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;container boards&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">category_</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">:</span>
+        <span class="c1"># The category id is found among the tag&#39;s previous siblings and looks</span>
+        <span class="c1"># like &lt;a name=&quot;category-2&quot;&gt;&lt;/a&gt;. We want the number in the name attr.</span>
+        <span class="n">category_id_tag</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">category_</span><span class="o">.</span><span class="n">previous_siblings</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">category_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">category_id_tag</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">title_bar</span> <span class="o">=</span> <span class="n">category_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;div&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;title_wrapper&quot;</span><span class="p">)</span>
+        <span class="n">category_name</span> <span class="o">=</span> <span class="n">title_bar</span><span class="o">.</span><span class="n">text</span>
+
+        <span class="c1"># Add category to database queue.</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;category&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">category_id</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">category_name</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">await</span> <span class="n">manager</span><span class="o">.</span><span class="n">content_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">category</span><span class="p">)</span>
+
+        <span class="n">boards</span> <span class="o">=</span> <span class="n">category_</span><span class="o">.</span><span class="n">findAll</span><span class="p">(</span>
+            <span class="s2">&quot;tr&quot;</span><span class="p">,</span>
+            <span class="p">{</span><span class="s2">&quot;class&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;o-board&quot;</span><span class="p">,</span> <span class="s2">&quot;board&quot;</span><span class="p">,</span> <span class="s2">&quot;item&quot;</span><span class="p">]}</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">board_</span> <span class="ow">in</span> <span class="n">boards</span><span class="p">:</span>
+            <span class="n">clickable</span> <span class="o">=</span> <span class="n">board_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;td&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;main clickable&quot;</span><span class="p">)</span>
+            <span class="n">link</span> <span class="o">=</span> <span class="n">clickable</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;span&quot;</span><span class="p">,</span> <span class="n">class_</span><span class="o">=</span><span class="s2">&quot;link&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+            <span class="n">href</span> <span class="o">=</span> <span class="n">link</span><span class="p">[</span><span class="s2">&quot;href&quot;</span><span class="p">]</span>
+            <span class="n">board_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">url</span><span class="si">}{</span><span class="n">href</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">await</span> <span class="n">scrape_board</span><span class="p">(</span><span class="n">board_url</span><span class="p">,</span> <span class="n">manager</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

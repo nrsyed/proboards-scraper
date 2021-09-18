@@ -1,0 +1,479 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>proboards_scraper.http_requests &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">Command Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>proboards_scraper.http_requests</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for proboards_scraper.http_requests</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">http</span>
+<span class="kn">import</span> <span class="nn">imghdr</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pathlib</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">aiofiles</span>
+<span class="kn">import</span> <span class="nn">aiohttp</span>
+<span class="kn">import</span> <span class="nn">bs4</span>
+<span class="kn">import</span> <span class="nn">selenium.webdriver</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">test_ico</span><span class="p">(</span><span class="n">h</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Test for .ico files to be added to the ``imghdr`` module tests.</span>
+<span class="sd">    See `ICO file format`_ and `imghdr.tests`_.</span>
+
+<span class="sd">    .. _`ICO file format`: https://en.wikipedia.org/wiki/ICO_(file_format)</span>
+<span class="sd">    .. _`imghdr.tests`:</span>
+<span class="sd">        https://docs.python.org/3/library/imghdr.html#imghdr.tests</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">h</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x00\x00</span><span class="s2">&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">h</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x01\x00</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x02\x00</span><span class="s2">&quot;</span><span class="p">)):</span>
+        <span class="k">return</span> <span class="s2">&quot;ico&quot;</span>
+<span class="n">imghdr</span><span class="o">.</span><span class="n">tests</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">test_ico</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_chrome_driver"><a class="viewcode-back" href="../../proboards_scraper.html#proboards_scraper.get_chrome_driver">[docs]</a><span class="k">def</span> <span class="nf">get_chrome_driver</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">selenium</span><span class="o">.</span><span class="n">webdriver</span><span class="o">.</span><span class="n">Chrome</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns an instance of a Selenium Chrome driver with the headless</span>
+<span class="sd">    option set to ``True``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Headless Chrome driver.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">chrome_opts</span> <span class="o">=</span> <span class="n">selenium</span><span class="o">.</span><span class="n">webdriver</span><span class="o">.</span><span class="n">ChromeOptions</span><span class="p">()</span>
+    <span class="n">chrome_opts</span><span class="o">.</span><span class="n">headless</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">driver</span> <span class="o">=</span> <span class="n">selenium</span><span class="o">.</span><span class="n">webdriver</span><span class="o">.</span><span class="n">Chrome</span><span class="p">(</span><span class="n">options</span><span class="o">=</span><span class="n">chrome_opts</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">driver</span></div>
+
+
+<div class="viewcode-block" id="get_login_cookies"><a class="viewcode-back" href="../../proboards_scraper.html#proboards_scraper.get_login_cookies">[docs]</a><span class="k">def</span> <span class="nf">get_login_cookies</span><span class="p">(</span>
+    <span class="n">home_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">username</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">password</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">driver</span><span class="p">:</span> <span class="n">selenium</span><span class="o">.</span><span class="n">webdriver</span><span class="o">.</span><span class="n">Chrome</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">page_load_wait</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Logs in to a Proboards account using Selenium and returns the cookies from</span>
+<span class="sd">    the authenticated login session.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        home_url: URL for the Proboards forum homepage.</span>
+<span class="sd">        username: Login username.</span>
+<span class="sd">        password: Login password.</span>
+<span class="sd">        driver: Selenium Chrome driver (optional).</span>
+<span class="sd">        page_load_wait: Time (in seconds) to wait to allow the page to load.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A list of dicts, where each dict corresponds to a cookie, from the</span>
+<span class="sd">        Selenium Chrome driver.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">driver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">driver</span> <span class="o">=</span> <span class="n">get_chrome_driver</span><span class="p">()</span>
+
+    <span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">home_url</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">page_load_wait</span><span class="p">)</span>
+
+    <span class="n">links</span> <span class="o">=</span> <span class="n">driver</span><span class="o">.</span><span class="n">find_elements_by_tag_name</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+    <span class="n">login_url</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">links</span><span class="p">:</span>
+        <span class="n">href</span> <span class="o">=</span> <span class="n">link</span><span class="o">.</span><span class="n">get_attribute</span><span class="p">(</span><span class="s2">&quot;href&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">href</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;https://login.proboards.com/login&quot;</span><span class="p">):</span>
+            <span class="n">login_url</span> <span class="o">=</span> <span class="n">href</span>
+            <span class="k">break</span>
+
+    <span class="c1"># Navigate to login page and fill in username/password fields.</span>
+    <span class="n">driver</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">login_url</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">page_load_wait</span><span class="p">)</span>
+
+    <span class="n">email_input</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">password_input</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">submit_input</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">driver</span><span class="o">.</span><span class="n">find_elements_by_tag_name</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">input_</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">input_name</span> <span class="o">=</span> <span class="n">input_</span><span class="o">.</span><span class="n">get_attribute</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">input_name</span> <span class="o">==</span> <span class="s2">&quot;email&quot;</span><span class="p">:</span>
+                <span class="n">email_input</span> <span class="o">=</span> <span class="n">input_</span>
+            <span class="k">elif</span> <span class="n">input_name</span> <span class="o">==</span> <span class="s2">&quot;password&quot;</span><span class="p">:</span>
+                <span class="n">password_input</span> <span class="o">=</span> <span class="n">input_</span>
+            <span class="k">elif</span> <span class="n">input_name</span> <span class="o">==</span> <span class="s2">&quot;continue&quot;</span><span class="p">:</span>
+                <span class="n">submit_input</span> <span class="o">=</span> <span class="n">input_</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="n">email_input</span><span class="o">.</span><span class="n">send_keys</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+    <span class="n">password_input</span><span class="o">.</span><span class="n">send_keys</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+    <span class="n">submit_input</span><span class="o">.</span><span class="n">click</span><span class="p">()</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">page_load_wait</span><span class="p">)</span>
+
+    <span class="n">cookies</span> <span class="o">=</span> <span class="n">driver</span><span class="o">.</span><span class="n">get_cookies</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">cookies</span></div>
+
+
+<div class="viewcode-block" id="get_login_session"><a class="viewcode-back" href="../../proboards_scraper.html#proboards_scraper.get_login_session">[docs]</a><span class="k">def</span> <span class="nf">get_login_session</span><span class="p">(</span><span class="n">cookies</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get an authenticated ``aiohttp`` session using the cookies provided.</span>
+
+<span class="sd">    This is achieved by converting cookies from a Selenium driver session</span>
+<span class="sd">    to ``http`` module Morsels (see `http.cookies.Morsel`_), which can be</span>
+<span class="sd">    added to the ``aiohttp`` session&#39;s cookie jar.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cookies: A list of dicts as returned by :func:`get_login_cookies`,</span>
+<span class="sd">            i.e., from a Selenium driver session.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        An ``aiohttp`` session with the given cookies in its cookie jar.</span>
+
+<span class="sd">    .. _`http.cookies.Morsel`:</span>
+<span class="sd">        https://docs.python.org/3/library/http.cookies.html#morsel-objects</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating aiohttp login session from cookies&quot;</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">()</span>
+
+    <span class="n">morsels</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">cookie</span> <span class="ow">in</span> <span class="n">cookies</span><span class="p">:</span>
+        <span class="c1"># https://docs.python.org/3/library/http.cookies.html#morsel-objects</span>
+        <span class="n">morsel</span> <span class="o">=</span> <span class="n">http</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">Morsel</span><span class="p">()</span>
+        <span class="n">morsel</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">])</span>
+        <span class="n">morsel</span><span class="p">[</span><span class="s2">&quot;domain&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;domain&quot;</span><span class="p">]</span>
+        <span class="n">morsel</span><span class="p">[</span><span class="s2">&quot;httponly&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;httpOnly&quot;</span><span class="p">]</span>
+        <span class="n">morsel</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">]</span>
+        <span class="n">morsel</span><span class="p">[</span><span class="s2">&quot;secure&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;secure&quot;</span><span class="p">]</span>
+
+        <span class="c1"># NOTE: ignore expires field; if it&#39;s absent, the cookie remains</span>
+        <span class="c1"># valid for the duration of the session.</span>
+        <span class="c1"># if &quot;expiry&quot; in cookie:</span>
+        <span class="c1">#     morsel[&quot;expires&quot;] = cookie[&quot;expiry&quot;]</span>
+
+        <span class="n">morsels</span><span class="p">[</span><span class="n">cookie</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">morsel</span>
+
+    <span class="n">session</span><span class="o">.</span><span class="n">cookie_jar</span><span class="o">.</span><span class="n">update_cookies</span><span class="p">(</span><span class="n">morsels</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Added cookies to aiohttp session&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">session</span></div>
+
+
+<div class="viewcode-block" id="get_source"><a class="viewcode-back" href="../../proboards_scraper.html#proboards_scraper.get_source">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_source</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get page source of a URL.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: URL to visit.</span>
+<span class="sd">        session: ``aiohttp`` session.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Page source.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting page source for </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># TODO: check response HTTP status code</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="k">await</span> <span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">bs4</span><span class="o">.</span><span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="download_image"><a class="viewcode-back" href="../../proboards_scraper.html#proboards_scraper.download_image">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">download_image</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">ClientSession</span><span class="p">,</span> <span class="n">dst_dir</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Attempt to download the image at ``url`` to the directory specified by</span>
+<span class="sd">    ``dst_dir``. The downloaded file is named after its MD5 hash to ensure</span>
+<span class="sd">    uniqueness. If a file already exists on disk (i.e., has been previously</span>
+<span class="sd">    downloaded), it is not rewritten.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url: Image URL.</span>
+<span class="sd">        session: ``aiohttp`` session.</span>
+<span class="sd">        dst_dir: Directory to which the image should be downloaded.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A dict containing information on the download attempt and, if download</span>
+<span class="sd">        was successful, image metadata::</span>
+
+<span class="sd">            {</span>
+<span class="sd">                &quot;status&quot;: {</span>
+<span class="sd">                    &quot;get&quot;: HTTP response code,</span>
+<span class="sd">                    &quot;exists&quot;: whether the image already exists on disk (bool),</span>
+<span class="sd">                    &quot;valid&quot;: whether the file is a valid image file,</span>
+<span class="sd">                },</span>
+<span class="sd">                &quot;image&quot;: {</span>
+<span class="sd">                    &quot;url&quot;: image download URL,</span>
+<span class="sd">                    &quot;filename&quot;: downloaded image filename,</span>
+<span class="sd">                    &quot;md5_hash&quot;: file MD5 hash,</span>
+<span class="sd">                    &quot;size&quot;: filesize on disk,</span>
+<span class="sd">                },</span>
+<span class="sd">            }</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;//&quot;</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https:</span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading image: </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;get&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;exists&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;valid&quot;</span><span class="p">:</span> <span class="kc">None</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+            <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;md5_hash&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">aiohttp</span><span class="o">.</span><span class="n">client_exceptions</span><span class="o">.</span><span class="n">ClientConnectorError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Failed to download image at </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="s2">&quot;(it is likely the image or server no longer exists)&quot;</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;get&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span>
+
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="k">await</span> <span class="n">response</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+            <span class="c1"># The file extension doesn&#39;t necessarily match the filetype, so we</span>
+            <span class="c1"># manually check the file header and set the correct extension. If</span>
+            <span class="c1"># the file doesn&#39;t correspond to a supported image filetype, we</span>
+            <span class="c1"># assume the downloaded file is invalid and skip it.</span>
+            <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;valid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">filetype</span> <span class="o">=</span> <span class="n">imghdr</span><span class="o">.</span><span class="n">what</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="n">img</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">filetype</span> <span class="o">==</span> <span class="s2">&quot;jpeg&quot;</span><span class="p">:</span>
+                <span class="n">filetype</span> <span class="o">=</span> <span class="s2">&quot;jpg&quot;</span>
+
+            <span class="k">if</span> <span class="n">filetype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;valid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="c1"># Set the filestem to the md5 hash of the image.</span>
+                <span class="n">img_md5</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">img</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+                <span class="n">new_fname</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">img_md5</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">filetype</span><span class="si">}</span><span class="s2">&quot;</span>
+
+                <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">][</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_fname</span>
+                <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">][</span><span class="s2">&quot;size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+                <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">][</span><span class="s2">&quot;md5_hash&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">img_md5</span>
+
+                <span class="n">img_fpath</span> <span class="o">=</span> <span class="n">dst_dir</span> <span class="o">/</span> <span class="n">new_fname</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">img_fpath</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;exists&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">async</span> <span class="k">with</span> <span class="n">aiofiles</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">img_fpath</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="k">await</span> <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ret</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;exists&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
