@@ -126,23 +126,26 @@ def pbd_cli():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-d", "--database", type=str, default="site/forum.db",
-        metavar="<path>", help="Path to database file"
+        metavar="<path>", help="Path to database file; default ./site/forum.db"
     )
 
-    # One actions must be chosen. The value of `0` is used to indicate that
+    # One action must be chosen. The value of `0` is used to indicate that
     # that a given action was NOT provided.
     actions = parser.add_mutually_exclusive_group(required=True)
     actions.add_argument(
         "--board", "-b", nargs="?", type=int, default=0, const=None,
-        metavar="board_id"
+        metavar="board_id",
+        help="Board id; if omitted, list all boards"
     )
     actions.add_argument(
         "--user", "-u", nargs="?", type=int, default=0, const=None,
-        metavar="user_id"
+        metavar="user_id",
+        help="User id; if omitted, list all users"
     )
     actions.add_argument(
         "--thread", "-t", nargs="?", type=int, default=0, const=None,
-        metavar="thread_id"
+        metavar="thread_id",
+        help="Thread id; if omitted, list all threads"
     )
     args = vars(parser.parse_args())
 

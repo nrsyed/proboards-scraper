@@ -35,7 +35,7 @@ def split_url(url: str) -> Tuple[str, str]:
         url: URL to a forum page.
 
     Returns:
-        ``(base_url, path)``
+        :data:`(base_url, path)`
 
         The base URL and resource path URL component (or ``None`` if ``url``
         is just the base/homepage URL).

@@ -167,7 +167,7 @@ class Database:
                 )
 
         Returns:
-            inserted, ret
+            :data:`(inserted, ret)`
 
             * inserted:
                 An integer code denoting insert status.
