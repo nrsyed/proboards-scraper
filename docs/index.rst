@@ -10,6 +10,7 @@ ProBoards Forum Scraper documentation
    :maxdepth: 2
    :caption: Contents:
 
-   setup
+   overview
+   installation
    cli
    proboards_scraper

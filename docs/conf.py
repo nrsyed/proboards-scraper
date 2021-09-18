@@ -38,8 +38,8 @@ extensions = [
 ]
 
 # sphinx_autodoc_typehints options
-typehints_fully_qualified = True
 #autodoc_typehints = "signature"
+typehints_fully_qualified = True
 autodoc_inherit_docstrings = False
 
 # Add any paths that contain templates here, relative to this directory.

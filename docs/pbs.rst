@@ -62,6 +62,11 @@ Optional arguments
   attributes of :class:`proboards_scraper.ScraperManager` for more
   information on rate-limiting values and behavior.
 
+.. warning::
+  Disabling delays between requests may result in request throttling or being
+  blocked by the server.
+  
+
 * ``-U``/``--no-users``: This flag disables the users page from being scraped
   when the forum homepage URL is given for ``url``. This might be desirable if
   a previous attempt to scrape the site was interrupted (after all users from
@@ -76,31 +81,39 @@ Optional arguments
 Examples
 --------
 
-**Scrape the entire forum:**
+Scrape the entire forum
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: none
 
   pbs https://yoursite.proboards.com -u user -p pass
 
-**Scrape all user profiles:**
+Scrape all user profiles
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: none
 
   pbs https://yoursite.proboards.com/members -u user -p pass
 
-**Scrape a specific user's profile:**
+Scrape a specific user's profile
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: none
 
   pbs https://yoursite.proboards.com/user/4 -u user -p pass
 
-**Scrape a specific board (including all its threads and sub-boards):**
+Scrape a specific board
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: none
 
   pbs https://yoursite.proboards.com/board/2/boardname -u user -p pass
 
-**Scrape a specific thread:**
+.. note::
+  This scrapes all threads in the board and recursively scrapes any sub-boards.
+
+Scrape a specific thread
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: none
 

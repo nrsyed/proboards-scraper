@@ -1,4 +1,4 @@
-ProBoards Forum Scraper API
+Python API
 ===========================
 
 TODO: Description here.

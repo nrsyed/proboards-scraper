@@ -1,10 +1,11 @@
-Setup
-=====
+Installation
+============
 
 Requirements
 ------------
 
 * Python ≥ 3.6
+* git
 * `Chromium <https://www.chromium.org>`_ or
   `Google Chrome <https://www.google.com/chrome/>`_ browser, and
   `ChromeDriver <http://chromedriver.chromium.org/home>`_
