@@ -46,6 +46,29 @@ interface with the SQLite database. Because the majority of this task
 involves HTTP requests and network I/O, the forum is scraped asynchronously
 using `asyncio`, `aiohttp`, and `aiofiles`.
 
+The figure below illustrates the scraper architecture and data flow at a high
+level.
+
+<img src="docs/img/pb_scraper_diagram.png" />
+
+The `proboards_scraper.scraper` module contains functions that are called to
+scrape the entire site or parts of the site. For example,
+`scrape_forum()` scrapes the forum homepage (including shoutbox posts) and
+calls `scrape_users()` and `scrape_board()` to get user profiles and all
+boards, respectively. `scrape_board()` recursively scrapes all sub-boards
+as well as all threads (and their posts) contained in a given board. Any one
+of these functions can be called on their own to scrape a particular section
+of a site, e.g., only user profiles or only a specific board.
+
+Regardless, all of the aforementioned functions take a `ScraperManager` class
+instance as one of their parameters. The `ScraperManager` handles tasks
+related to performing HTTP requests/downloads, and also serves as an interface
+with a `Database` class instance which, in turn, serves as an interface for
+querying or inserting items into the SQLite database.
+
+For more information, refer to the
+[complete documentation](https://nrsyed.github.io/proboards-scraper).
+
 
 # Installation
 
