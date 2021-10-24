@@ -132,4 +132,21 @@ Images
 ------
 
 Image metadata is stored in the database Image table (see
-:class:`proboards_scraper.database.Image`).
+:class:`proboards_scraper.database.Image`). Images are unique in that an
+image item in the database may also have an image file, saved on disk,
+associated with it. The location of the file (if any) on disk is stored in the
+``filename`` attribute of the ``Image`` object. To facilitate scraping, the
+``ScraperManager`` class has two methods,
+:meth:`proboards_scraper.ScraperManager.download_image` and
+:meth:`proboards_scraper.ScraperManager.insert_image`, that can be called
+to download an image from a URL and insert it into the database, respectively.
+
+This is mainly useful for scraping user profiles. A user's avatar is part of
+their profile. While scraping a profile, the avatar is downloaded by calling
+the aforementioned ``ScraperManager.download_image`` method, and information
+about the file (like its path on disk, its MD5 hash, and its filesize) is
+returned. This information is used to construct an ``Image`` object and
+insert it into the database via ``ScraperManager.insert_image``, which returns
+the id of the image. This id can be linked to an avatar
+(see :class:`proboards_scraper.database.Avatar`) and user when they're added
+to the content queue per the normal workflow.
