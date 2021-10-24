@@ -128,6 +128,7 @@ Since guests aren't registered and don't have an *actual* user id on the forum,
 we assign them negative user ids for the purpose of the database. The first
 guest encountered is assigned -1, the next -2, and so on.
 
+
 Images
 ------
 
