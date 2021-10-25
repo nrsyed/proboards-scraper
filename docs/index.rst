@@ -11,6 +11,7 @@ ProBoards Forum Scraper documentation
    :caption: Contents:
 
    overview
+   architecture
    installation
    cli
    proboards_scraper

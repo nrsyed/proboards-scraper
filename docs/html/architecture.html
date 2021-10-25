@@ -1,0 +1,354 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Architecture &mdash; ProBoards Forum Scraper 1.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ProBoards Forum Scraper
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#database-class">Database class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scrapermanager-class">ScraperManager class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scraper-module">Scraper module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#guests">Guests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#images">Images</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="proboards_scraper.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ProBoards Forum Scraper</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Architecture</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/architecture.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="architecture">
+<h1>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h1>
+<p>The architecture and data flow of the ProBoards Forum Scraper are presented
+at a high level in the figure below.</p>
+<img alt="_images/pb_scraper_diagram.png" class="with-border" src="_images/pb_scraper_diagram.png" />
+<div class="section" id="database-class">
+<h2>Database class<a class="headerlink" href="#database-class" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Database" title="proboards_scraper.database.Database"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Database</span></code></a> class serves as an interface
+for the SQLite database. It provides a number of convenient methods for
+querying the database and inserting items into the database (only insert
+methods are shown in the figure).</p>
+<p>For example, <a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Database.insert_board" title="proboards_scraper.database.Database.insert_board"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.database.Database.insert_board()</span></code></a> accepts
+a dictionary containing parameters corresponding to a board, which it uses to
+instantiate a <a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Board" title="proboards_scraper.database.Board"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Board</span></code></a> object. It queries the
+database to determine if the board already exists in the database. If it
+doesn’t, the new record is inserted into the database. The object is then
+returned to the caller. This allows interacting with the database without
+worrying about low level <code class="docutils literal notranslate"><span class="pre">sqlalchemy</span></code> implementation details (or even lower
+level SQL statements).</p>
+</div>
+<div class="section" id="scrapermanager-class">
+<h2>ScraperManager class<a class="headerlink" href="#scrapermanager-class" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager" title="proboards_scraper.ScraperManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager</span></code></a> class contains asynchronous
+methods to grab the HTML page source of a URL
+(<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.get_source" title="proboards_scraper.ScraperManager.get_source"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.get_source()</span></code></a>) and download an image
+(<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.download_image" title="proboards_scraper.ScraperManager.download_image"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.download_image()</span></code></a>). It also contains
+an asynchronous method <a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.run" title="proboards_scraper.ScraperManager.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.run()</span></code></a> that pops
+items from user queue and content queue and adds them and inserts them into the
+database.</p>
+<p>Why encapsulate these methods in a class instead of allowing them to be
+standalone functions?</p>
+<p>For starters, incorporating them into the <code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class enables us
+to keep track of the number of HTTP requests made and add delays between HTTP
+requests to avoid request throttling by the server.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ScraperManager.run()</span></code> method also ensures that all users are processed
+(via the user queue) and added to the database before all other site content,
+since most other site content references users in some way. For instance, a
+board might have moderators (i.e., users), a thread is started by a user,
+posts are made/edited by users, and polls are voted in by users. Each of these
+database tables contains a reference (or references) to objects in the users
+table; therefore, the users need to exist first before we can populate those
+other tables.</p>
+<p>Finally, having a <code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class allows us to store the <code class="docutils literal notranslate"><span class="pre">aiohttp</span></code>
+session, <code class="docutils literal notranslate"><span class="pre">selenium</span></code> driver session, and a reference to the <code class="docutils literal notranslate"><span class="pre">Database</span></code>
+class instance in a single place. This way, we only need to pass around the
+<code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class instance instead of these other objects, and let it
+determine which object should be used for a given task and how to use it.
+For example, the caller doesn’t need to worry about which <code class="docutils literal notranslate"><span class="pre">Database</span></code> insert
+method to use. It only needs to put a dictionary containing the necessary
+database object parameters into the queue. The <code class="docutils literal notranslate"><span class="pre">run()</span></code> method inspects it
+and determines which <code class="docutils literal notranslate"><span class="pre">Database</span></code> method is needed to insert it into the
+database.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class also contains two methods that break from the
+content queue and <code class="docutils literal notranslate"><span class="pre">run()</span></code> pattern:
+<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.insert_guest" title="proboards_scraper.ScraperManager.insert_guest"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.insert_guest()</span></code></a>
+and <a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.insert_image" title="proboards_scraper.ScraperManager.insert_image"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.insert_image()</span></code></a>. The reason for
+this will be explained below.</p>
+</div>
+<div class="section" id="scraper-module">
+<h2>Scraper module<a class="headerlink" href="#scraper-module" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="proboards_scraper.scraper.html#module-proboards_scraper.scraper" title="proboards_scraper.scraper"><code class="xref py py-mod docutils literal notranslate"><span class="pre">proboards_scraper.scraper</span></code></a> module contains several asynchronous
+functions that scrape the site by calling the relevant <code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code>
+methods and parsing/processing the HTML page source. There is a dedicated
+function for scraping all users,
+<a class="reference internal" href="proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_users" title="proboards_scraper.scraper.scrape_users"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.scraper.scrape_users()</span></code></a>, and there are other
+functions for grabbing all other site content.
+<a class="reference internal" href="proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_forum" title="proboards_scraper.scraper.scrape_forum"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.scraper.scrape_forum()</span></code></a> grabs all shoutbox posts and
+post smileys (via functions not shown in the figure above), then calls
+<a class="reference internal" href="proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_board" title="proboards_scraper.scraper.scrape_board"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.scraper.scrape_board()</span></code></a> on all boards on the main
+page. The <code class="docutils literal notranslate"><span class="pre">scrape_board()</span></code> recursively scrapes any sub-boards, as well as
+all threads belonging to the board via
+<a class="reference internal" href="proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_thread" title="proboards_scraper.scraper.scrape_thread"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.scraper.scrape_thread()</span></code></a> which, in turn, scrapes a
+thread (including a poll, if one is associated with the thread, and all the
+poll’s options and voters) and the thread’s posts.</p>
+<p>In the figure, the arrows pointing to/from the dashed line representing the
+<code class="docutils literal notranslate"><span class="pre">scraper</span></code> module represents the data flow for each of these functions. In
+other words, each function gets the page source (via
+<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.get_source" title="proboards_scraper.ScraperManager.get_source"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.get_source()</span></code></a>), parses it for relevant
+information, and adds the appropriate item(s) to the appropriate queue.</p>
+<p>Each function can be called individually, even if some of them are recursive.
+For example, <code class="docutils literal notranslate"><span class="pre">scrape_thread</span></code> can be called with a single thread’s URL; it
+doesn’t <em>need</em> to be recursively called by <code class="docutils literal notranslate"><span class="pre">scrape_board</span></code>.</p>
+</div>
+<div class="section" id="guests">
+<h2>Guests<a class="headerlink" href="#guests" title="Permalink to this headline">¶</a></h2>
+<p>Guests can be considered a special case of user. Guests are users
+who aren’t registered on the site (or may be formerly registered users who
+have been deleted). There’s no user profile associated with a guest, but there
+can be posts made by or threads started by guests. Because they aren’t
+registered users, their profile can’t be scraped alongside registered users
+from the forum’s members page before all other site content is scraped, as
+mentioned above.</p>
+<p>In other words, guests can be encountered at any time while scraping boards,
+threads, posts, etc. To account for this, the <code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class has a
+function specifically for querying and inserting guests into the database,
+bypassing the async content queue. If, for instance, a post made by a guest
+is encountered by <a class="reference internal" href="proboards_scraper.scraper.html#proboards_scraper.scraper.scrape_thread" title="proboards_scraper.scraper.scrape_thread"><code class="xref py py-func docutils literal notranslate"><span class="pre">proboards_scraper.scraper.scrape_thread()</span></code></a> while
+scraping a thread, <a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.insert_guest" title="proboards_scraper.ScraperManager.insert_guest"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.insert_guest()</span></code></a>
+is called with the guest’s username. If a guest with that username already
+exists in the database, their id is retrieved and returned; if the guest does
+not already exist, they’re inserted into the database and assigned an id, which
+is then returned. <code class="docutils literal notranslate"><span class="pre">scrape_thread</span></code> can then proceed, assigning the post to the
+correct user id (from the User table—see
+<a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.User" title="proboards_scraper.database.User"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.User</span></code></a>)</p>
+<p>Since guests aren’t registered and don’t have an <em>actual</em> user id on the forum,
+we assign them negative user ids for the purpose of the database. The first
+guest encountered is assigned -1, the next -2, and so on.</p>
+</div>
+<div class="section" id="images">
+<h2>Images<a class="headerlink" href="#images" title="Permalink to this headline">¶</a></h2>
+<p>Image metadata is stored in the database Image table (see
+<a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Image" title="proboards_scraper.database.Image"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Image</span></code></a>). Images are unique in that an
+image item in the database may also have an image file, saved on disk,
+associated with it. The location of the file (if any) on disk is stored in the
+<code class="docutils literal notranslate"><span class="pre">filename</span></code> attribute of the <code class="docutils literal notranslate"><span class="pre">Image</span></code> object. To facilitate scraping, the
+<code class="docutils literal notranslate"><span class="pre">ScraperManager</span></code> class has two methods,
+<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.download_image" title="proboards_scraper.ScraperManager.download_image"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.download_image()</span></code></a> and
+<a class="reference internal" href="proboards_scraper.html#proboards_scraper.ScraperManager.insert_image" title="proboards_scraper.ScraperManager.insert_image"><code class="xref py py-meth docutils literal notranslate"><span class="pre">proboards_scraper.ScraperManager.insert_image()</span></code></a>, that can be called
+to download an image from a URL and insert it into the database, respectively.</p>
+<p>This is mainly useful for scraping user profiles. A user’s avatar is part of
+their profile. While scraping a profile, the avatar is downloaded by calling
+the aforementioned <code class="docutils literal notranslate"><span class="pre">ScraperManager.download_image</span></code> method, and information
+about the file (like its path on disk, its MD5 hash, and its filesize) is
+returned. This information is used to construct an <code class="docutils literal notranslate"><span class="pre">Image</span></code> object and
+insert it into the database via <code class="docutils literal notranslate"><span class="pre">ScraperManager.insert_image</span></code>, which returns
+the id of the image. This id can be linked to an avatar
+(see <a class="reference internal" href="proboards_scraper.database.html#proboards_scraper.database.Avatar" title="proboards_scraper.database.Avatar"><code class="xref py py-class docutils literal notranslate"><span class="pre">proboards_scraper.database.Avatar</span></code></a>) and user when they’re added
+to the content queue per the normal workflow.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="overview.html" class="btn btn-neutral float-left" title="Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Najam R. Syed.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
