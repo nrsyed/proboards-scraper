@@ -198,6 +198,19 @@ class ScraperManager:
                 else:
                     self.db.insert_user(user)
 
+        type_to_insert_func = {
+            "board": self.db.insert_board,
+            "category": self.db.insert_category,
+            "image": self.db.insert_image,
+            "moderator": self.db.insert_moderator,
+            "poll": self.db.insert_poll,
+            "poll_option": self.db.insert_poll_option,
+            "poll_voter": self.db.insert_poll_voter,
+            "post": self.db.insert_post,
+            "shoutbox_post": self.db.insert_shoutbox_post,
+            "thread": self.db.insert_thread,
+        }
+
         all_content_added = False
         while not all_content_added:
             content = await self.content_queue.get()
@@ -207,19 +220,6 @@ class ScraperManager:
             else:
                 type_ = content["type"]
                 del content["type"]
-
-                type_to_insert_func = {
-                    "board": self.db.insert_board,
-                    "category": self.db.insert_category,
-                    "image": self.db.insert_image,
-                    "moderator": self.db.insert_moderator,
-                    "poll": self.db.insert_poll,
-                    "poll_option": self.db.insert_poll_option,
-                    "poll_voter": self.db.insert_poll_voter,
-                    "post": self.db.insert_post,
-                    "shoutbox_post": self.db.insert_shoutbox_post,
-                    "thread": self.db.insert_thread,
-                }
 
                 insert_func = type_to_insert_func[type_]
                 insert_func(content)
