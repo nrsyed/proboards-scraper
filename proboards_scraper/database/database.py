@@ -115,7 +115,8 @@ class Database:
             logger.info(f"{item_desc} database entry was updated")
 
     def insert(
-        self, obj: sqlalchemy.orm.DeclarativeMeta,
+        self,
+        obj: sqlalchemy.orm.DeclarativeMeta,
         filters: dict = None,
         update: bool = False
     ) -> Tuple[int, sqlalchemy.orm.DeclarativeMeta]:
