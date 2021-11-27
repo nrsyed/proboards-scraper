@@ -1,11 +1,11 @@
 # ProBoards Forum Scraper
 
-
 Refer to the [complete documentation](https://nrsyed.github.io/proboards-scraper)
+and [this series of blog posts](https://nrsyed.com/2021/11/26/asynchronously-web-scraping-a-proboards-forum-with-python-part-1/)
 for more detailed information.
 
 
-# README table of contents
+# Table of Contents
 
 * [Disclaimer](#disclaimer)
 * [Overview](#overview)
