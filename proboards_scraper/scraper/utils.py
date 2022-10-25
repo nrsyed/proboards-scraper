@@ -41,7 +41,7 @@ def split_url(url: str) -> Tuple[str, str]:
         is just the base/homepage URL).
     """
     url = url.rstrip("/")
-    expr = r"(^.*\.com)(/.*)?$"
+    expr = r"(^.*\.[a-z]+)(/.*)?$"
     match = re.match(expr, url)
     base_url, path = match.groups()
     return base_url, path
