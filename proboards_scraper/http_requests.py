@@ -38,7 +38,7 @@ def get_chrome_driver() -> selenium.webdriver.Chrome:
         Headless Chrome driver.
     """
     chrome_opts = selenium.webdriver.ChromeOptions()
-    chrome_opts.headless = True
+    chrome_opts.headless = False
     driver = selenium.webdriver.Chrome(options=chrome_opts)
     return driver
 
